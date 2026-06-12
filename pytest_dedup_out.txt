@@ -1,0 +1,64 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.3, pytest-9.0.3, pluggy-1.6.0 -- D:\python3.12\python.exe
+cachedir: .pytest_cache
+rootdir: d:\mahjong
+plugins: anyio-4.13.0, langsmith-0.8.9
+collecting ... collected 4 items
+
+tests/test_dedup_filter.py::DedupFilterTests::test_group_duplicates_keeps_sharpest_frame_across_videos_for_same_source PASSED [ 25%]
+tests/test_dedup_filter.py::DedupFilterTests::test_main_copies_selected_files_and_report_matches_disk PASSED [ 50%]
+tests/test_dedup_filter.py::DedupFilterTests::test_main_dry_run_writes_report_without_copying_files_and_uses_format_b_names FAILED [ 75%]
+tests/test_dedup_filter.py::DedupFilterTests::test_plan_selection_balances_sources_and_videos_with_caps PASSED [100%]
+
+================================== FAILURES ===================================
+_ DedupFilterTests.test_main_dry_run_writes_report_without_copying_files_and_uses_format_b_names _
+
+self = <test_dedup_filter.DedupFilterTests testMethod=test_main_dry_run_writes_report_without_copying_files_and_uses_format_b_names>
+
+    def test_main_dry_run_writes_report_without_copying_files_and_uses_format_b_names(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            input_root = root / "frames_candidate"
+            output_root = root / "frames_selected"
+            report_path = root / "selection_report.json"
+    
+            self._write_candidate_set(input_root / "bili_111", video_count=2, frames_per_video=2)
+            self._write_candidate_set(input_root / "dy_222", video_count=2, frames_per_video=2)
+    
+            exit_code = dedup_filter.main(
+                [
+                    "--input-root",
+                    str(input_root),
+                    "--output-root",
+                    str(output_root),
+                    "--report",
+                    str(report_path),
+                    "--total",
+                    "4",
+                    "--max-source-ratio",
+                    "0.5",
+                    "--max-per-video",
+                    "1",
+                    "--filename-style",
+                    "B",
+                    "--dry-run",
+                ]
+            )
+    
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(report_path.exists())
+            self.assertFalse(output_root.exists() and list(output_root.rglob("*.jpg")))
+    
+            payload = json.loads(report_path.read_text(encoding="utf-8"))
+            self.assertTrue(payload["dry_run"])
+>           self.assertEqual(payload["summary"]["selected_frames"], 4)
+E           AssertionError: 2 != 4
+
+tests\test_dedup_filter.py:103: AssertionError
+---------------------------- Captured stdout call -----------------------------
+筛选完成：选中 2 张，报告写入 C:\Users\stefanie\AppData\Local\Temp\tmpjxv7bbf4\selection_report.json
+---------------------------- Captured stderr call -----------------------------
+scan_frames:   0%|          | 0/8 [00:00<?, ?image/s]scan_frames: 100%|██████████| 8/8 [00:00<00:00, 446.81image/s]
+=========================== short test summary info ===========================
+FAILED tests/test_dedup_filter.py::DedupFilterTests::test_main_dry_run_writes_report_without_copying_files_and_uses_format_b_names - AssertionError: 2 != 4
+========================= 1 failed, 3 passed in 3.55s =========================

@@ -1,0 +1,146 @@
+{
+  "dry_run": true,
+  "summary": {
+    "total_requested": 20,
+    "candidate_frames": 80,
+    "deduped_frames": 54,
+    "selected_frames": 20,
+    "selected_sources": 1
+  },
+  "sources": {
+    "bili_1014433798": {
+      "candidate_frames": 80,
+      "deduped_frames": 54,
+      "selected_frames": 20,
+      "videos": [
+        {
+          "video_id": "BV1LSEX6sEAC_BV1LSEX6sEAC.f30066",
+          "candidate_frames": 80,
+          "selected_frames": 20
+        }
+      ]
+    }
+  },
+  "selected_files": [
+    {
+      "source": "bili_1014433798",
+      "video_id": "BV1LSEX6sEAC_BV1LSEX6sEAC.f30066",
+      "original_path": "D:\\mahjong\\data\\frames_candidate_smoke\\bili_1014433798\\BV1LSEX6sEAC_BV1LSEX6sEAC.f30066_f001501.jpg",
+      "target_name": "bili_1014433798__BV1LSEX6sEAC_BV1LSEX6sEAC_f30066__f001501.jpg"
+    },
+    {
+      "source": "bili_1014433798",
+      "video_id": "BV1LSEX6sEAC_BV1LSEX6sEAC.f30066",
+      "original_path": "D:\\mahjong\\data\\frames_candidate_smoke\\bili_1014433798\\BV1LSEX6sEAC_BV1LSEX6sEAC.f30066_f002251.jpg",
+      "target_name": "bili_1014433798__BV1LSEX6sEAC_BV1LSEX6sEAC_f30066__f002251.jpg"
+    },
+    {
+      "source": "bili_1014433798",
+      "video_id": "BV1LSEX6sEAC_BV1LSEX6sEAC.f30066",
+      "original_path": "D:\\mahjong\\data\\frames_candidate_smoke\\bili_1014433798\\BV1LSEX6sEAC_BV1LSEX6sEAC.f30066_f002401.jpg",
+      "target_name": "bili_1014433798__BV1LSEX6sEAC_BV1LSEX6sEAC_f30066__f002401.jpg"
+    },
+    {
+      "source": "bili_1014433798",
+      "video_id": "BV1LSEX6sEAC_BV1LSEX6sEAC.f30066",
+      "original_path": "D:\\mahjong\\data\\frames_candidate_smoke\\bili_1014433798\\BV1LSEX6sEAC_BV1LSEX6sEAC.f30066_f002701.jpg",
+      "target_name": "bili_1014433798__BV1LSEX6sEAC_BV1LSEX6sEAC_f30066__f002701.jpg"
+    },
+    {
+      "source": "bili_1014433798",
+      "video_id": "BV1LSEX6sEAC_BV1LSEX6sEAC.f30066",
+      "original_path": "D:\\mahjong\\data\\frames_candidate_smoke\\bili_1014433798\\BV1LSEX6sEAC_BV1LSEX6sEAC.f30066_f002851.jpg",
+      "target_name": "bili_1014433798__BV1LSEX6sEAC_BV1LSEX6sEAC_f30066__f002851.jpg"
+    },
+    {
+      "source": "bili_1014433798",
+      "video_id": "BV1LSEX6sEAC_BV1LSEX6sEAC.f30066",
+      "original_path": "D:\\mahjong\\data\\frames_candidate_smoke\\bili_1014433798\\BV1LSEX6sEAC_BV1LSEX6sEAC.f30066_f003301.jpg",
+      "target_name": "bili_1014433798__BV1LSEX6sEAC_BV1LSEX6sEAC_f30066__f003301.jpg"
+    },
+    {
+      "source": "bili_1014433798",
+      "video_id": "BV1LSEX6sEAC_BV1LSEX6sEAC.f30066",
+      "original_path": "D:\\mahjong\\data\\frames_candidate_smoke\\bili_1014433798\\BV1LSEX6sEAC_BV1LSEX6sEAC.f30066_f003901.jpg",
+      "target_name": "bili_1014433798__BV1LSEX6sEAC_BV1LSEX6sEAC_f30066__f003901.jpg"
+    },
+    {
+      "source": "bili_1014433798",
+      "video_id": "BV1LSEX6sEAC_BV1LSEX6sEAC.f30066",
+      "original_path": "D:\\mahjong\\data\\frames_candidate_smoke\\bili_1014433798\\BV1LSEX6sEAC_BV1LSEX6sEAC.f30066_f004051.jpg",
+      "target_name": "bili_1014433798__BV1LSEX6sEAC_BV1LSEX6sEAC_f30066__f004051.jpg"
+    },
+    {
+      "source": "bili_1014433798",
+      "video_id": "BV1LSEX6sEAC_BV1LSEX6sEAC.f30066",
+      "original_path": "D:\\mahjong\\data\\frames_candidate_smoke\\bili_1014433798\\BV1LSEX6sEAC_BV1LSEX6sEAC.f30066_f004201.jpg",
+      "target_name": "bili_1014433798__BV1LSEX6sEAC_BV1LSEX6sEAC_f30066__f004201.jpg"
+    },
+    {
+      "source": "bili_1014433798",
+      "video_id": "BV1LSEX6sEAC_BV1LSEX6sEAC.f30066",
+      "original_path": "D:\\mahjong\\data\\frames_candidate_smoke\\bili_1014433798\\BV1LSEX6sEAC_BV1LSEX6sEAC.f30066_f004501.jpg",
+      "target_name": "bili_1014433798__BV1LSEX6sEAC_BV1LSEX6sEAC_f30066__f004501.jpg"
+    },
+    {
+      "source": "bili_1014433798",
+      "video_id": "BV1LSEX6sEAC_BV1LSEX6sEAC.f30066",
+      "original_path": "D:\\mahjong\\data\\frames_candidate_smoke\\bili_1014433798\\BV1LSEX6sEAC_BV1LSEX6sEAC.f30066_f007651.jpg",
+      "target_name": "bili_1014433798__BV1LSEX6sEAC_BV1LSEX6sEAC_f30066__f007651.jpg"
+    },
+    {
+      "source": "bili_1014433798",
+      "video_id": "BV1LSEX6sEAC_BV1LSEX6sEAC.f30066",
+      "original_path": "D:\\mahjong\\data\\frames_candidate_smoke\\bili_1014433798\\BV1LSEX6sEAC_BV1LSEX6sEAC.f30066_f007801.jpg",
+      "target_name": "bili_1014433798__BV1LSEX6sEAC_BV1LSEX6sEAC_f30066__f007801.jpg"
+    },
+    {
+      "source": "bili_1014433798",
+      "video_id": "BV1LSEX6sEAC_BV1LSEX6sEAC.f30066",
+      "original_path": "D:\\mahjong\\data\\frames_candidate_smoke\\bili_1014433798\\BV1LSEX6sEAC_BV1LSEX6sEAC.f30066_f007951.jpg",
+      "target_name": "bili_1014433798__BV1LSEX6sEAC_BV1LSEX6sEAC_f30066__f007951.jpg"
+    },
+    {
+      "source": "bili_1014433798",
+      "video_id": "BV1LSEX6sEAC_BV1LSEX6sEAC.f30066",
+      "original_path": "D:\\mahjong\\data\\frames_candidate_smoke\\bili_1014433798\\BV1LSEX6sEAC_BV1LSEX6sEAC.f30066_f008251.jpg",
+      "target_name": "bili_1014433798__BV1LSEX6sEAC_BV1LSEX6sEAC_f30066__f008251.jpg"
+    },
+    {
+      "source": "bili_1014433798",
+      "video_id": "BV1LSEX6sEAC_BV1LSEX6sEAC.f30066",
+      "original_path": "D:\\mahjong\\data\\frames_candidate_smoke\\bili_1014433798\\BV1LSEX6sEAC_BV1LSEX6sEAC.f30066_f008701.jpg",
+      "target_name": "bili_1014433798__BV1LSEX6sEAC_BV1LSEX6sEAC_f30066__f008701.jpg"
+    },
+    {
+      "source": "bili_1014433798",
+      "video_id": "BV1LSEX6sEAC_BV1LSEX6sEAC.f30066",
+      "original_path": "D:\\mahjong\\data\\frames_candidate_smoke\\bili_1014433798\\BV1LSEX6sEAC_BV1LSEX6sEAC.f30066_f008851.jpg",
+      "target_name": "bili_1014433798__BV1LSEX6sEAC_BV1LSEX6sEAC_f30066__f008851.jpg"
+    },
+    {
+      "source": "bili_1014433798",
+      "video_id": "BV1LSEX6sEAC_BV1LSEX6sEAC.f30066",
+      "original_path": "D:\\mahjong\\data\\frames_candidate_smoke\\bili_1014433798\\BV1LSEX6sEAC_BV1LSEX6sEAC.f30066_f011251.jpg",
+      "target_name": "bili_1014433798__BV1LSEX6sEAC_BV1LSEX6sEAC_f30066__f011251.jpg"
+    },
+    {
+      "source": "bili_1014433798",
+      "video_id": "BV1LSEX6sEAC_BV1LSEX6sEAC.f30066",
+      "original_path": "D:\\mahjong\\data\\frames_candidate_smoke\\bili_1014433798\\BV1LSEX6sEAC_BV1LSEX6sEAC.f30066_f011401.jpg",
+      "target_name": "bili_1014433798__BV1LSEX6sEAC_BV1LSEX6sEAC_f30066__f011401.jpg"
+    },
+    {
+      "source": "bili_1014433798",
+      "video_id": "BV1LSEX6sEAC_BV1LSEX6sEAC.f30066",
+      "original_path": "D:\\mahjong\\data\\frames_candidate_smoke\\bili_1014433798\\BV1LSEX6sEAC_BV1LSEX6sEAC.f30066_f011701.jpg",
+      "target_name": "bili_1014433798__BV1LSEX6sEAC_BV1LSEX6sEAC_f30066__f011701.jpg"
+    },
+    {
+      "source": "bili_1014433798",
+      "video_id": "BV1LSEX6sEAC_BV1LSEX6sEAC.f30066",
+      "original_path": "D:\\mahjong\\data\\frames_candidate_smoke\\bili_1014433798\\BV1LSEX6sEAC_BV1LSEX6sEAC.f30066_f011851.jpg",
+      "target_name": "bili_1014433798__BV1LSEX6sEAC_BV1LSEX6sEAC_f30066__f011851.jpg"
+    }
+  ]
+}
