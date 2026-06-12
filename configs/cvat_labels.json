@@ -1,3 +1,36 @@
 {
-  "labels": []
+  "labels": [
+    {"name": "w1", "color": "#D32F2F", "attributes": []},
+    {"name": "w2", "color": "#E64A19", "attributes": []},
+    {"name": "w3", "color": "#F57C00", "attributes": []},
+    {"name": "w4", "color": "#FBC02D", "attributes": []},
+    {"name": "w5", "color": "#AFB42B", "attributes": []},
+    {"name": "w6", "color": "#689F38", "attributes": []},
+    {"name": "w7", "color": "#388E3C", "attributes": []},
+    {"name": "w8", "color": "#00796B", "attributes": []},
+    {"name": "w9", "color": "#00897B", "attributes": []},
+
+    {"name": "t1", "color": "#1976D2", "attributes": []},
+    {"name": "t2", "color": "#1E88E5", "attributes": []},
+    {"name": "t3", "color": "#42A5F5", "attributes": []},
+    {"name": "t4", "color": "#5E35B1", "attributes": []},
+    {"name": "t5", "color": "#8E24AA", "attributes": []},
+    {"name": "t6", "color": "#6A1B9A", "attributes": []},
+    {"name": "t7", "color": "#AB47BC", "attributes": []},
+    {"name": "t8", "color": "#8D6E63", "attributes": []},
+    {"name": "t9", "color": "#4E342E", "attributes": []},
+
+    {"name": "b1", "color": "#C2185B", "attributes": []},
+    {"name": "b2", "color": "#D81B60", "attributes": []},
+    {"name": "b3", "color": "#EC407A", "attributes": []},
+    {"name": "b4", "color": "#7B1FA2", "attributes": []},
+    {"name": "b5", "color": "#512DA8", "attributes": []},
+    {"name": "b6", "color": "#303F9F", "attributes": []},
+    {"name": "b7", "color": "#455A64", "attributes": []},
+    {"name": "b8", "color": "#546E7A", "attributes": []},
+    {"name": "b9", "color": "#607D8B", "attributes": []},
+
+    {"name": "back", "color": "#212121", "attributes": []},
+    {"name": "unknown", "color": "#BDBDBD", "attributes": []}
+  ]
 }
