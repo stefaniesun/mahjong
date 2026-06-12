@@ -1,0 +1,27 @@
+{
+  "sources": [
+    {
+      "source": "bili_1014433798",
+      "platform": "bili",
+      "output_dir": "data\\raw_videos\\bili_1014433798",
+      "discovered": 1287,
+      "matched": 5,
+      "downloaded": 5,
+      "skipped_existing": 0,
+      "skipped_keyword": 0,
+      "skipped_state": 0,
+      "failed": 0,
+      "failures": [],
+      "dry_run_candidates": []
+    }
+  ],
+  "totals": {
+    "authors": 1,
+    "downloaded": 5,
+    "failed": 0,
+    "skipped_existing": 0,
+    "skipped_keyword": 0,
+    "skipped_state": 0
+  },
+  "dry_run": false
+}

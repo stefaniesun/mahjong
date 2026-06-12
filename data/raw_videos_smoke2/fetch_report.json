@@ -1,0 +1,29 @@
+{
+  "sources": [
+    {
+      "source": "dy_demo_user",
+      "platform": "dy",
+      "output_dir": "data\\raw_videos_smoke2\\dy_demo_user",
+      "discovered": 1,
+      "matched": 1,
+      "downloaded": 0,
+      "skipped_existing": 0,
+      "skipped_keyword": 0,
+      "skipped_state": 0,
+      "failed": 1,
+      "failures": [
+        "https://www.douyin.com/video/1234567890123456789 :: ERROR: [Douyin] 1234567890123456789: Fresh cookies (not necessarily logged in) are needed"
+      ],
+      "dry_run_candidates": []
+    }
+  ],
+  "totals": {
+    "authors": 1,
+    "downloaded": 0,
+    "failed": 1,
+    "skipped_existing": 0,
+    "skipped_keyword": 0,
+    "skipped_state": 0
+  },
+  "dry_run": false
+}

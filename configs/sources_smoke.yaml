@@ -1,0 +1,6 @@
+- platform: bili
+  uid: "1014433798"
+  url: "https://space.bilibili.com/1014433798"
+  name: "四川麻将波波"
+  max_videos: 1
+  exclude_keywords: ["教学", "解说", "线上"]

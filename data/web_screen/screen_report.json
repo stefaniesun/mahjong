@@ -1,0 +1,177 @@
+{
+  "videos": [
+    {
+      "video": "D:\\mahjong\\data\\raw_videos\\bili_1014433798\\BV1AQE76TExU_BV1AQE76TExU.f100024.mp4",
+      "source": "bili_1014433798",
+      "metrics": {
+        "sampled_frames": 133,
+        "active_tile_frames": 132,
+        "active_ratio": 0.9925,
+        "static_background_ratio": 0.0,
+        "border_ui_ratio": 0.0,
+        "grid_layout_ratio": 0.796,
+        "honor_ratio": 0.0
+      },
+      "decision": {
+        "low_value": false,
+        "suspected_screen_recording": false,
+        "reasons": []
+      },
+      "clips": [
+        {
+          "start_seconds": 0.0,
+          "end_seconds": 156.0,
+          "duration_seconds": 156.0,
+          "output_path": ""
+        },
+        {
+          "start_seconds": 160.0,
+          "end_seconds": 264.0,
+          "duration_seconds": 104.0,
+          "output_path": ""
+        }
+      ],
+      "thumbnails": [
+        "D:\\mahjong\\data\\web_screen\\thumbnails\\bili_1014433798\\BV1AQE76TExU_BV1AQE76TExU_f100024_01_000000ms.jpg",
+        "D:\\mahjong\\data\\web_screen\\thumbnails\\bili_1014433798\\BV1AQE76TExU_BV1AQE76TExU_f100024_02_002000ms.jpg",
+        "D:\\mahjong\\data\\web_screen\\thumbnails\\bili_1014433798\\BV1AQE76TExU_BV1AQE76TExU_f100024_03_004000ms.jpg"
+      ]
+    },
+    {
+      "video": "D:\\mahjong\\data\\raw_videos\\bili_1014433798\\BV1LoV26ZEjZ_BV1LoV26ZEjZ.f30066.mp4",
+      "source": "bili_1014433798",
+      "metrics": {
+        "sampled_frames": 15,
+        "active_tile_frames": 15,
+        "active_ratio": 1.0,
+        "static_background_ratio": 0.0,
+        "border_ui_ratio": 0.0,
+        "grid_layout_ratio": 0.7161,
+        "honor_ratio": 0.0
+      },
+      "decision": {
+        "low_value": false,
+        "suspected_screen_recording": false,
+        "reasons": []
+      },
+      "clips": [
+        {
+          "start_seconds": 0.0,
+          "end_seconds": 28.0,
+          "duration_seconds": 28.0,
+          "output_path": ""
+        }
+      ],
+      "thumbnails": [
+        "D:\\mahjong\\data\\web_screen\\thumbnails\\bili_1014433798\\BV1LoV26ZEjZ_BV1LoV26ZEjZ_f30066_01_000000ms.jpg",
+        "D:\\mahjong\\data\\web_screen\\thumbnails\\bili_1014433798\\BV1LoV26ZEjZ_BV1LoV26ZEjZ_f30066_02_002000ms.jpg",
+        "D:\\mahjong\\data\\web_screen\\thumbnails\\bili_1014433798\\BV1LoV26ZEjZ_BV1LoV26ZEjZ_f30066_03_004000ms.jpg"
+      ]
+    },
+    {
+      "video": "D:\\mahjong\\data\\raw_videos\\bili_1014433798\\BV1LSEX6sEAC_BV1LSEX6sEAC.f30066.mp4",
+      "source": "bili_1014433798",
+      "metrics": {
+        "sampled_frames": 198,
+        "active_tile_frames": 197,
+        "active_ratio": 0.9949,
+        "static_background_ratio": 0.0,
+        "border_ui_ratio": 0.0,
+        "grid_layout_ratio": 0.7575,
+        "honor_ratio": 0.0
+      },
+      "decision": {
+        "low_value": false,
+        "suspected_screen_recording": false,
+        "reasons": []
+      },
+      "clips": [
+        {
+          "start_seconds": 0.0,
+          "end_seconds": 152.0,
+          "duration_seconds": 152.0,
+          "output_path": ""
+        },
+        {
+          "start_seconds": 156.0,
+          "end_seconds": 394.0,
+          "duration_seconds": 238.0,
+          "output_path": ""
+        }
+      ],
+      "thumbnails": [
+        "D:\\mahjong\\data\\web_screen\\thumbnails\\bili_1014433798\\BV1LSEX6sEAC_BV1LSEX6sEAC_f30066_01_000000ms.jpg",
+        "D:\\mahjong\\data\\web_screen\\thumbnails\\bili_1014433798\\BV1LSEX6sEAC_BV1LSEX6sEAC_f30066_02_002000ms.jpg",
+        "D:\\mahjong\\data\\web_screen\\thumbnails\\bili_1014433798\\BV1LSEX6sEAC_BV1LSEX6sEAC_f30066_03_004000ms.jpg"
+      ]
+    },
+    {
+      "video": "D:\\mahjong\\data\\raw_videos\\bili_1014433798\\BV1n2VA61EeZ_BV1n2VA61EeZ.f30066.mp4",
+      "source": "bili_1014433798",
+      "metrics": {
+        "sampled_frames": 186,
+        "active_tile_frames": 186,
+        "active_ratio": 1.0,
+        "static_background_ratio": 0.0,
+        "border_ui_ratio": 0.0,
+        "grid_layout_ratio": 0.8297,
+        "honor_ratio": 0.0
+      },
+      "decision": {
+        "low_value": false,
+        "suspected_screen_recording": false,
+        "reasons": []
+      },
+      "clips": [
+        {
+          "start_seconds": 0.0,
+          "end_seconds": 370.0,
+          "duration_seconds": 370.0,
+          "output_path": ""
+        }
+      ],
+      "thumbnails": [
+        "D:\\mahjong\\data\\web_screen\\thumbnails\\bili_1014433798\\BV1n2VA61EeZ_BV1n2VA61EeZ_f30066_01_000000ms.jpg",
+        "D:\\mahjong\\data\\web_screen\\thumbnails\\bili_1014433798\\BV1n2VA61EeZ_BV1n2VA61EeZ_f30066_02_002000ms.jpg",
+        "D:\\mahjong\\data\\web_screen\\thumbnails\\bili_1014433798\\BV1n2VA61EeZ_BV1n2VA61EeZ_f30066_03_004000ms.jpg"
+      ]
+    },
+    {
+      "video": "D:\\mahjong\\data\\raw_videos\\bili_1014433798\\BV1TMVp6VEic_BV1TMVp6VEic.f30066.mp4",
+      "source": "bili_1014433798",
+      "metrics": {
+        "sampled_frames": 146,
+        "active_tile_frames": 146,
+        "active_ratio": 1.0,
+        "static_background_ratio": 0.0,
+        "border_ui_ratio": 0.0,
+        "grid_layout_ratio": 0.7672,
+        "honor_ratio": 0.0
+      },
+      "decision": {
+        "low_value": false,
+        "suspected_screen_recording": false,
+        "reasons": []
+      },
+      "clips": [
+        {
+          "start_seconds": 0.0,
+          "end_seconds": 290.0,
+          "duration_seconds": 290.0,
+          "output_path": ""
+        }
+      ],
+      "thumbnails": [
+        "D:\\mahjong\\data\\web_screen\\thumbnails\\bili_1014433798\\BV1TMVp6VEic_BV1TMVp6VEic_f30066_01_000000ms.jpg",
+        "D:\\mahjong\\data\\web_screen\\thumbnails\\bili_1014433798\\BV1TMVp6VEic_BV1TMVp6VEic_f30066_02_002000ms.jpg",
+        "D:\\mahjong\\data\\web_screen\\thumbnails\\bili_1014433798\\BV1TMVp6VEic_BV1TMVp6VEic_f30066_03_004000ms.jpg"
+      ]
+    }
+  ],
+  "summary": {
+    "total_videos": 5,
+    "low_value": 0,
+    "suspected_screen_recording": 0,
+    "total_clips": 7
+  }
+}
