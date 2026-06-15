@@ -5,6 +5,69 @@
   max_videos: 5
   exclude_keywords: ["教学", "解说", "线上"]
 
+- platform: bili
+  uid: "702954376"
+  url: "https://space.bilibili.com/702954376"
+  name: "麻将海哥"
+  max_videos: 5
+  exclude_keywords: ["教学", "解说", "线上"]
+
+- platform: bili
+  uid: "1598547959"
+  url: "https://space.bilibili.com/1598547959"
+  name: "川麻喵喵"
+  max_videos: 5
+  exclude_keywords: ["教学", "解说", "线上"]
+
+- platform: bili
+  uid: "2113722330"
+  url: "https://space.bilibili.com/2113722330"
+  name: "青间川麻"
+  max_videos: 5
+  exclude_keywords: ["教学", "解说", "线上"]
+
+- platform: bili
+  uid: "1486568928"
+  url: "https://space.bilibili.com/1486568928"
+  name: "周猩猩的麻将进化日记"
+  max_videos: 5
+  exclude_keywords: ["教学", "解说", "线上"]
+
+- platform: bili
+  uid: "2012293856"
+  url: "https://space.bilibili.com/2012293856"
+  name: "川麻大师兄合至道茶府"
+  max_videos: 5
+  exclude_keywords: ["教学", "解说", "线上"]
+
+- platform: bili
+  uid: "514315666"
+  url: "https://space.bilibili.com/514315666"
+  name: "大头麻将"
+  max_videos: 5
+  exclude_keywords: ["教学", "解说", "线上"]
+
+- platform: bili
+  uid: "1513200642"
+  url: "https://space.bilibili.com/1513200642"
+  name: "川麻茂茂"
+  max_videos: 5
+  exclude_keywords: ["教学", "解说", "线上"]
+
+- platform: bili
+  uid: "3493093724654381"
+  url: "https://space.bilibili.com/3493093724654381"
+  name: "四川麻将李鑫"
+  max_videos: 5
+  exclude_keywords: ["教学", "解说", "线上"]
+
+- platform: bili
+  uid: "3537123521071975"
+  url: "https://space.bilibili.com/3537123521071975"
+  name: "四川麻将裁判邓先生"
+  max_videos: 5
+  exclude_keywords: ["教学", "解说", "线上"]
+
 # 抖音示例：待你提供可用主页链接 / UID 与 Cookie 后启用
 # - platform: dy
 #   uid: "douyin_user_id"

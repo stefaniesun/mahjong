@@ -1,0 +1,31 @@
+# 预标注器 27 类 → 本项目检测2类 + 分类标签 的映射
+# 检测层: 所有牌面类一律 tile_face; 预标注器无 back 类, 牌背由人工补
+# 分类层: 给出建议分类标签, 在 X-AnyLabeling 二遍校正时确认/修改
+map:
+  1B: {det: tile_face, cls: t1}   # Bamboo=条
+  2B: {det: tile_face, cls: t2}
+  3B: {det: tile_face, cls: t3}
+  4B: {det: tile_face, cls: t4}
+  5B: {det: tile_face, cls: t5}
+  6B: {det: tile_face, cls: t6}
+  7B: {det: tile_face, cls: t7}
+  8B: {det: tile_face, cls: t8}
+  9B: {det: tile_face, cls: t9}
+  1C: {det: tile_face, cls: w1}   # Character=万
+  2C: {det: tile_face, cls: w2}
+  3C: {det: tile_face, cls: w3}
+  4C: {det: tile_face, cls: w4}
+  5C: {det: tile_face, cls: w5}
+  6C: {det: tile_face, cls: w6}
+  7C: {det: tile_face, cls: w7}
+  8C: {det: tile_face, cls: w8}
+  9C: {det: tile_face, cls: w9}
+  1D: {det: tile_face, cls: b1}   # Dot=筒
+  2D: {det: tile_face, cls: b2}
+  3D: {det: tile_face, cls: b3}
+  4D: {det: tile_face, cls: b4}
+  5D: {det: tile_face, cls: b5}
+  6D: {det: tile_face, cls: b6}
+  7D: {det: tile_face, cls: b7}
+  8D: {det: tile_face, cls: b8}
+  9D: {det: tile_face, cls: b9}

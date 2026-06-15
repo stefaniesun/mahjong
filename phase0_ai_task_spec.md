@@ -9,8 +9,8 @@
 ## 项目背景(供 AI 理解上下文)
 
 我在做一个第一人称视角(AI 眼镜拍摄)的实时**四川麻将**识别系统,采用两阶段架构:
-- 检测器:YOLO11(2 类:`tile_face` 牌面 / `tile_back` 牌背)
-- 分类器:29 类牌面分类(见下方类别表)
+- 检测器:YOLO11(**单类:`tile_face` 牌面**)——只检测有花色的牌面,牌背不检测当背景
+- 分类器:28 类牌面分类(27 牌面 + unknown,见下方类别表)
 
 **重要约束:本项目只针对四川麻将(血战到底),牌池只有万/条/筒共 108 张,不含东南西北中发白等字牌,也不含花牌。** 全项目类别体系按此设计。
 
@@ -22,21 +22,22 @@ Phase 0 的目标是建立**冻结测试集 + 自动化评测体系**,所有后�
 ### 类别表(全项目统一,写入 `configs/classes.yaml`)
 
 ```yaml
-# 检测类别(2 类)
+# 检测类别(单类)
 detection:
   0: tile_face
-  1: tile_back
 
-# 分类类别(29 类,四川麻将)
+# 分类类别(28 类,四川麻将)
 classification:
   - [w1, w2, w3, w4, w5, w6, w7, w8, w9]   # 一万~九万
   - [t1, t2, t3, t4, t5, t6, t7, t8, t9]   # 一条~九条
   - [b1, b2, b3, b4, b5, b6, b7, b8, b9]   # 一筒~九筒
-  - [back]      # 牌背
   - [unknown]   # 侧面/严重遮挡/不可读/非万条筒的牌
 ```
 
 **字牌处理规则**:实体麻将套装里通常带字牌,网络视频里也可能偶尔出现。凡画面中出现东南西北中发白或花牌:检测仍标 `tile_face`(它确实是一张牌面),分类一律标 `unknown`。线上推理时 `unknown` 结果直接丢弃,不参与投票。
+
+**牌背处理规则(重要,已去掉 back 类以降低标注成本)**:本项目**不检测牌背**。对家立牌、牌墙等纯色牌背,标注时**一律不标,当作背景忽略**。检测器只学"有花色的牌面"这一类,更纯粹,小目标召回也更不易被牌背干扰。
+> 注记:"数牌墙/数对手牌数"这类需要识别牌背的策略功能属远期(Phase 6 之后)。届时如需 back 能力,将由 Phase 1 合成数据零成本补充(纯色块按网格排列、程序自动生成完美标注),**不依赖人工标注真实牌背**。
 
 ### 仓库目录结构(任务 1 中创建)
 
@@ -45,8 +46,11 @@ mahjong-eval/
 ├── configs/
 │   ├── classes.yaml
 │   ├── sources.yaml          # 博主清单配置(平台/UID/主页URL/备注)
+│   ├── prelabel_map.yaml     # 预标注器27类→本项目标签 映射表(任务0.5)
+│   ├── paths.yaml            # 关键路径登记(prelabeler_onnx 等)
 │   └── xanylabel_classes.txt  # X-AnyLabeling 类别配置
 ├── scripts/
+│   ├── train_prelabeler.sh    # 训练预标注模型(任务0.5)
 │   ├── fetch_videos.py        # 按博主批量抓取
 │   ├── extract_frames.py
 │   ├── dedup_filter.py
@@ -92,11 +96,83 @@ mahjong-eval/
 **1b. `docs/annotation_guide.md` — 标注规范**
 内容包含:
 - 框的边界规则(贴牌可见边缘、遮挡 >70% 仍标、叠牌每张单独框、画面边缘半张牌照标)
-- 29 类逐类说明,**重点写易混淆对的判别要点**:4条vs5条、6条vs9条(注意旋转方向)、2条vs3条、各万字牌的字形区分、2筒vs3筒的排布
-- `back` 与 `unknown` 的使用边界(给出文字描述的典型场景各 3 个),并明确:**字牌/花牌出现时分类标 `unknown`**
-- X-AnyLabeling 推荐操作流:加载旧模型 ONNX 做自动预标注 → 人工逐张校正(删误检/补漏检/改类),快捷键配置建议;以及"先全部过框、再统一过类"的两遍法
+- 28 类逐类说明(27 牌面 + unknown),**重点写易混淆对的判别要点**:4条vs5条、6条vs9条(注意旋转方向)、2条vs3条、各万字牌的字形区分、2筒vs3筒的排布
+- **牌背一律不标**(当背景);`unknown` 的使用边界(给出文字描述的典型场景各 3 个),并明确:**字牌/花牌出现时分类标 `unknown`**
+- X-AnyLabeling 推荐操作流:加载预标注器 ONNX(任务0.5 产物)做自动预标注 → 人工逐张校正(删误检/补漏检/改类),快捷键配置建议;以及"先全部过框、再统一过类"的两遍法
 
 **验收**:目录结构完整;两份文档我读完即可直接执行,无歧义。
+
+---
+
+## 任务 0.5:训练预标注模型(预标注器,本项目的标注加速器)
+
+**背景**:本项目用一个"预标注模型"帮我在 X-AnyLabeling 里把框先画好,我只做校正(删误检/补漏检/改类),不从零画框。这个模型**不是最终检测器**,只是标注加速器,目标是"快速够用",不必追求高精度。
+
+**数据资产(我已具备)**:我在 Roboflow 自己的工作区(stephens-workspace)训练过一个四川麻将检测数据集,已下载到本地:
+- 路径:`E:\360MoveData\Users\Administrator\Desktop\Mahjong.v1i.yolov11`(YOLOv11 格式,含 data.yaml + train/valid/test)
+- 类别:**27 类,纯万条筒,无字牌无花牌**,命名为花色字母编码:
+  - `1B~9B` = Bamboo = **条**
+  - `1C~9C` = Character = **万**
+  - `1D~9D` = Dot = **筒**
+- 注意:数据集无牌背类——正好与本项目一致(本项目不检测牌背),牌背一律不标。
+
+**做什么**:
+1. 写 `docs/train_prelabeler.md`(给我照做的训练手册)与 `configs/prelabel_map.yaml`(类别映射表,见下),并提供训练/导出脚本 `scripts/train_prelabeler.sh`(或 .py)
+2. 训练命令基线(Ultralytics YOLO11,我有 NVIDIA 显卡):
+   ```bash
+   pip install ultralytics
+   yolo detect train data="E:/360MoveData/Users/Administrator/Desktop/Mahjong.v1i.yolov11/data.yaml" \
+       model=yolo11s.pt epochs=80 imgsz=960 batch=16 name=prelabel_v1
+   ```
+   - 显存不足则降 batch / imgsz;脚本里把这些做成可调参数并加注释
+   - 产物:`runs/detect/prelabel_v1/weights/best.pt`
+3. 真实域验证(关键步骤,写进手册):用 `best.pt` 对我的几张博主真实截图做 predict(conf 0.25),人眼确认手牌区与牌河大部分牌被框出即达标;远牌漏检可接受(校正时手工补)
+4. 导出 ONNX 供下游脚本统一调用:
+   ```bash
+   yolo export model=runs/detect/prelabel_v1/weights/best.pt format=onnx imgsz=960
+   ```
+   产物 `best.onnx` 即后续 `make_prelabel.py`、`screen_web_videos.py`、Phase 1 模板/背景提取等所有"需要一个粗检测器"的地方统一加载的模型;在 `configs/paths.yaml` 里登记其路径为 `prelabeler_onnx`
+
+**`configs/prelabel_map.yaml`(类别映射表,务必核对 B=条、D=筒 不要写反)**:
+```yaml
+# 预标注器 27 类 → 本项目检测单类 tile_face + 分类标签 的映射
+# 检测层:所有牌面类一律 tile_face;牌背不检测(不标)
+# 分类层:给出建议分类标签,我在 X-AnyLabeling 二遍校正时确认/修改
+map:
+  1B: {det: tile_face, cls: t1}   # Bamboo=条
+  2B: {det: tile_face, cls: t2}
+  3B: {det: tile_face, cls: t3}
+  4B: {det: tile_face, cls: t4}
+  5B: {det: tile_face, cls: t5}
+  6B: {det: tile_face, cls: t6}
+  7B: {det: tile_face, cls: t7}
+  8B: {det: tile_face, cls: t8}
+  9B: {det: tile_face, cls: t9}
+  1C: {det: tile_face, cls: w1}   # Character=万
+  2C: {det: tile_face, cls: w2}
+  3C: {det: tile_face, cls: w3}
+  4C: {det: tile_face, cls: w4}
+  5C: {det: tile_face, cls: w5}
+  6C: {det: tile_face, cls: w6}
+  7C: {det: tile_face, cls: w7}
+  8C: {det: tile_face, cls: w8}
+  9C: {det: tile_face, cls: w9}
+  1D: {det: tile_face, cls: b1}   # Dot=筒
+  2D: {det: tile_face, cls: b2}
+  3D: {det: tile_face, cls: b3}
+  4D: {det: tile_face, cls: b4}
+  5D: {det: tile_face, cls: b5}
+  6D: {det: tile_face, cls: b6}
+  7D: {det: tile_face, cls: b7}
+  8D: {det: tile_face, cls: b8}
+  9D: {det: tile_face, cls: b9}
+```
+
+**验收标准**:训练跑通且产出 best.pt/best.onnx;在我的真实博主截图上 predict 可视化达"手牌区+牌河大部分框出";映射表加载无误(单测:27 个类名全覆盖、B/D 未写反);paths.yaml 登记 prelabeler_onnx 路径,下游脚本能据此加载。
+
+**人工配合**:我执行训练命令(挂机几小时)、提供几张真实截图做验证、肉眼确认效果达标。
+
+**给 AI 的提示**:这是临时加速器,不要在它身上做复杂调参或迭代;它的精度上限不影响最终系统(最终检测器在 Phase 1/2 从合成数据重新训练)。
 
 ---
 
@@ -141,11 +217,11 @@ mahjong-eval/
 **做什么**:任务 1.5 抓回来的视频数量会远多于最终需要的。此脚本自动粗筛,把"有效片段"挑出来,大幅减少我人工看片时间。
 
 **功能需求**:
-1. **含牌检测**:对每个视频按 1 fps 采样,用我提供的旧 YOLO11 模型(`--model` 传入)跑推理,统计"检出 ≥3 张牌的帧"占比;占比 < 30%(可调)的视频整体标记为"低价值"
+1. **含牌检测**:对每个视频按 1 fps 采样,用预标注器 ONNX(任务0.5,经 paths.yaml 的 prelabeler_onnx 加载)跑推理,统计"检出 ≥3 张牌的帧"占比;占比 < 30%(可调)的视频整体标记为"低价值"
 2. **录屏排除启发式**:检测画面是否为线上麻将录屏——特征包括:画面四周存在大面积纯色/渐变 UI 边框、帧间背景完全静止(背景区域像素方差≈0)、检出的"牌"长宽比异常统一且排列成完美网格。命中则标记 "疑似录屏"
 3. **有效片段切割**:对保留的视频,找出连续"含牌帧"区段(允许 3 秒间断),用 ffmpeg 无损切出片段(`-c copy`),输出到 `web_clips/`,命名 `{原名}_clip{n}.mp4`
 4. 输出 `screen_report.json` + 一个简单 HTML 预览页:每个视频/片段一行,附 3 张缩略图 + 判定结果 + 判定理由,我只需快速过一遍预览页做最终取舍
-5. 字牌提示(尽力而为):若旧模型类别表里有字牌类且某视频字牌检出占比高,在报告中标注"疑似非四川麻将",供我人工确认
+5. 说明:预标注器为纯万条筒 27 类,无字牌类,故"疑似非四川麻将"提示改为:若某视频整体含牌帧占比正常但识别置信度普遍异常低,标注"疑似异常域(画质/牌款差异大)"供我人工确认
 
 **验收标准**:对 1 个真实麻将视频 + 1 个无关视频 + 1 个线上麻将录屏(我会提供样例)运行,三者判定正确;切出的片段可正常播放。
 
@@ -171,8 +247,9 @@ mahjong-eval/
 ## 任务 4:X-AnyLabeling 标注环境配置与预标注生成
 
 **做什么**:
-1. 生成 `configs/xanylabel_classes.txt`(29 类标签清单,顺序与 classes.yaml 一致)及标注项目配置说明
-2. 写 `scripts/make_prelabel.py`:用旧 YOLO11 模型(`--model`)对 `frames_selected/` 推理(conf 0.25,宁多勿漏),输出 **X-AnyLabeling 兼容的预标注 JSON**(每图同名 .json,矩形 shape,label 按 29 类映射;字牌类预测映射为 unknown);我打开 X-AnyLabeling 后直接看到预标注框,只做校正
+1. 生成 `configs/xanylabel_classes.txt`(28 类标签清单 = 27 牌面 + unknown,顺序与 classes.yaml 一致)及标注项目配置说明
+2. 写 `scripts/make_prelabel.py`:加载预标注器 ONNX(任务0.5,paths.yaml 的 prelabeler_onnx)对 `frames_selected/` 推理(conf 0.25,宁多勿漏),按 `configs/prelabel_map.yaml` 把 27 类预测映射为 **检测框 tile_face + 建议分类标签**,输出 **X-AnyLabeling 兼容的预标注 JSON**(每图同名 .json,矩形 shape);牌背不在检测范围内,无需标注;我打开 X-AnyLabeling 后直接看到预标注框,只做校正
+   - **测试集 vs 训练集差异化策略(防锚定)**:本任务用于冻结测试集时,conf 阈值调高(默认 0.4,只预标高置信大牌,逼我自己补全远小牌,避免"审核心态"漏标);用于 Phase 2 训练数据伪标注时 conf 调低(0.25,追求省力)。阈值由 `--conf` 控制,文档写明两种场景取值
 3. 写 `scripts/export_to_coco.py`:把 X-AnyLabeling 标注目录(图 + JSON)转换为标准 COCO(含 image 的 `source` 博主字段),供后续校验与评测消费
 4. 在 README 写完整操作流:X-AnyLabeling 下载安装(免部署,下载即用)、加载类别文件、打开目录、校正操作、保存——给我照着点的程度
 
@@ -204,7 +281,7 @@ mahjong-eval/
 
 输入:COCO 格式 GT + COCO 格式预测结果(detections json)
 输出指标:
-- 标准 COCO mAP@0.5、mAP@0.5:0.95(分 tile_face / tile_back 两类)
+- 标准 COCO mAP@0.5、mAP@0.5:0.95(单类 tile_face)
 - **按目标尺寸分桶的召回率与精确率**:<20px / 20~40px / >40px 三桶(较短边),这是本项目最关键的指标
 - 不同置信度阈值下的 P-R 数据点(供选线上阈值)
 - **按图像来源(source = 博主)分组分别输出全部指标**——读 COCO image 的 `source` 字段;某个博主上指标异常低,说明该域(机位/桌布/牌款)没学好,是补数据的直接信号
@@ -215,7 +292,7 @@ mahjong-eval/
 输入:按类分文件夹的 crop 图 + 模型预测(或直接接 ONNX 模型推理)
 输出:
 - top-1 准确率(总体 + 每类)
-- 29×29 混淆矩阵(热力图 PNG + CSV),**单独列出错误率最高的 10 个混淆对**
+- 28×28 混淆矩阵(热力图 PNG + CSV),**单独列出错误率最高的 10 个混淆对**
 - 每类的低置信正确样本和高置信错误样本各存 10 张图,供分析
 
 ### 6c. `eval/eval_e2e.py` — 端到端评测
@@ -245,8 +322,8 @@ mahjong-eval/
 
 ## 任务 8:基线评测执行
 
-**做什么**:用我现有的 YOLO11 旧模型(我会提供 .pt 文件路径和它的类别名列表)在冻结测试集上跑任务 6 的全套评测,产出第一份 `report.html` 作为项目基线。
-注意:旧模型是多类直接检测,需要写一个适配层把它的输出映射到新的两阶段评测协议:万条筒各类映射为 tile_face + 对应分类标签;**若旧模型类别表里有字牌类,其预测一律映射为 tile_face + unknown**。
+**做什么**:用任务 0.5 训练的预标注器(best.pt / best.onnx)在冻结测试集上跑任务 6 的全套评测,产出第一份 `report.html` 作为项目基线。这个基线代表"现有 Roboflow 域模型直接用于真实域"的水平,后续 Phase 1/2 的提升都以它为起点对照。
+注意:预标注器是 27 类直接检测,用 `configs/prelabel_map.yaml` 的同一张映射表把输出转成两阶段评测协议(各类 → tile_face + 对应分类标签);本项目不检测牌背,牌背不计入评测。
 
 **验收标准**:基线报告生成,尤其要看到按尺寸分桶的召回率数字(预期 <20px 桶会很低,这就是我们要改进的基线),以及各博主域之间的指标差距。
 
@@ -263,11 +340,11 @@ mahjong-eval/
 
 ## 执行顺序与依赖
 
-任务 1 →(我填 sources.yaml、配 Cookie)→ 任务 1.5 → 任务 2 → 任务 2.5 → 任务 3 → 任务 4(生成预标注)→(我在 X-AnyLabeling 中校正标注)→ 任务 5/6/7 可并行开发 → 我标完转 COCO → 任务 8
+任务 1 → 任务 0.5(训练预标注器,我执行训练+验证)→(我填 sources.yaml、配 Cookie)→ 任务 1.5 → 任务 2 → 任务 2.5 → 任务 3 → 任务 4(生成预标注)→(我在 X-AnyLabeling 中校正标注)→ 任务 5/6/7 可并行开发 → 我标完转 COCO → 任务 8
 
 ## 我(人类)负责的部分,你不要尝试做
 
 - 在抖音/B站挑选 6~8 个符合标准的博主,填写 sources.yaml,提供抖音 Cookie
 - 在任务 2.5 的预览页上对视频片段做最终取舍
 - 在 X-AnyLabeling 中校正标注与交叉质检
-- 提供旧 YOLO11 模型权重文件及其类别名列表
+- 执行任务 0.5 的预标注器训练(数据集已在本地 E:\360MoveData\...\Mahjong.v1i.yolov11),提供真实截图验证效果

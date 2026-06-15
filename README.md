@@ -103,7 +103,99 @@ python scripts/fetch_videos.py --platform bili --limit-authors 1 --dry-run --coo
 python scripts/fetch_videos.py --platform bili --limit-authors 1 --cookies configs/cookies/bilibili.txt
 ```
 
-- 任务 2.5：对已下载网络视频做粗筛并生成预览页：
+- 一次抓取 `sources.yaml` 里全部博主（增量、可中断续传）：
+
+```bash
+python scripts/fetch_videos.py --platform bili --cookies configs/cookies/bilibili.txt --browser ""
+```
+
+### B 站 412 限流与下载提速
+
+B 站对 UP 主空间列表接口（WBI 签名）有反爬限流，**最常见的坑是空间视频很多时翻遍全部分页**会瞬间发起几十次请求直接被封 `412 Request is blocked by server`。脚本已针对性处理：
+
+- `--list-limit N`（默认 40）：拉空间列表时只取**最新 N 个**视频，一页搞定，从根本上避免深翻分页触发 412
+- `--candidates-cache PATH`（默认 `data/raw_videos/_candidates_cache.json`）：每个博主的列表成功拉取一次即落盘缓存，重跑直接复用、不再请求；加 `--refresh-list` 可强制刷新
+- 配额已满的博主（state 里已记录 ≥ `max_videos`）直接跳过、连列表都不请求
+- 列表请求命中 412 时按指数退避重试（`--list-backoff-base` 30s 起，`--list-backoff-max` 上限 300s，`--list-retries` 次）
+- 不同博主之间留 `--author-gap-min/max`（默认 10~20s）间隔
+
+若仍被限流，等几分钟让冷却结束再重跑即可（已下完的博主会被状态跳过）。
+
+> 下载提速：B 站常把单连接限到约 100~150 KB/s。若安装了 `aria2c`，可让 yt-dlp 走多连接显著提速；当前机器未安装 `aria2c` / `ffmpeg`（缺 `ffmpeg` 时音视频流不会被合并，但纯视频帧提取不受影响）。
+
+## 任务 2：智能抽帧
+
+`scripts/extract_frames.py` 会从 `data/raw_videos/` 递归查找视频，按指定采样率抽帧，并过滤模糊、欠曝、过曝帧。
+
+### 运行示例
+
+```powershell
+python scripts/extract_frames.py --input-root data/raw_videos --output-root data/frames_candidate --report data/frames_candidate/extract_report.json
+```
+
+常用参数：
+
+```powershell
+python scripts/extract_frames.py --fps 0.5 --blur-threshold 100 --min-brightness 30 --max-brightness 225
+```
+
+说明：
+
+- 默认每秒抽 `0.5` 帧，即约每 `2` 秒取一帧
+- 输出命名为 `{视频文件名}_f{帧号:06d}.jpg`
+- 会保留原始分辨率
+- 会保留原博主目录结构，例如输出到 `data/frames_candidate/bili_1014433798/`
+- 报告写入 `extract_report.json`，包含每个视频的采样数、保存数、模糊丢弃数、欠曝丢弃数、过曝丢弃数
+
+### 模糊阈值怎么校准
+
+`--blur-threshold` 使用灰度图的 Laplacian 方差，数值越低通常越糊。默认值是 `100`，适合作为第一轮粗筛起点。
+
+推荐校准流程：
+
+1. 先抽 1~2 个视频小样本：
+
+```powershell
+python scripts/extract_frames.py --input-root data/raw_videos --output-root data/frames_candidate_probe --report data/frames_candidate_probe/extract_report.json --limit-videos 2 --fps 0.5 --blur-threshold 100
+```
+
+2. 人眼检查 `data/frames_candidate_probe/`：
+   - 如果明显糊帧还很多，把阈值提高到 `150` 或 `200`
+   - 如果可用帧被误删太多，把阈值降低到 `50` 或 `80`
+3. 确认阈值后，再对全量视频运行正式抽帧。
+
+曝光阈值默认过滤平均亮度 `<30` 的欠曝帧和 `>225` 的过曝帧；如果视频整体偏暗，可适当降低 `--min-brightness`。
+
+## 任务 3：去重与多样性采样
+
+`scripts/dedup_filter.py` 会从 `data/frames_candidate/` 中按博主均衡选出最终待标注图片到 `data/frames_selected/`。
+
+### 运行示例
+
+```powershell
+python scripts/dedup_filter.py --input-root data/frames_candidate --output-root data/frames_selected --report data/frames_selected/selection_report.json --total 500 --per-video-cap 8 --min-gap-sec 30 --clean-output
+```
+
+说明：
+
+- 使用 `imagehash.phash` 做感知哈希去重，默认汉明距离 `<=8` 视为重复
+- 同一重复组优先保留 Laplacian 方差更高的清晰帧
+- 默认按博主目录名（如 `bili_1014433798`）均衡分配配额
+- 单博主占比默认不超过 `25%`
+- 单视频默认最多选 `8` 张
+- 同一视频内优先选择间隔至少 `30` 秒的帧
+- 输出文件名带来源前缀：`{source}__{video_id}__f000001.jpg`
+- 报告写入 `selection_report.json`，包含每个博主、每个视频的候选数、去重后数量、选中数量和入选时间戳
+
+只看报告不复制图片：
+
+```powershell
+python scripts/dedup_filter.py --input-root data/frames_candidate --output-root data/frames_selected --report data/frames_selected/selection_report.json --total 500 --dry-run
+```
+
+如果源视频不是 `30 fps`，可用 `--source-fps` 调整从帧号估算时间戳的比例。
+
+
 
 ```bash
 python scripts/screen_web_videos.py --input-root data/raw_videos --report data/web_screen/screen_report.json --preview data/web_screen/preview.html --clips-root data/web_clips --skip-ffmpeg
@@ -113,7 +205,34 @@ python scripts/screen_web_videos.py --input-root data/raw_videos --report data/w
 
 - 该脚本默认按 `1 fps` 采样，输出视频级判定、有效片段区间和 HTML 预览页
 - 若本机已安装 `ffmpeg`，去掉 `--skip-ffmpeg` 即可把保留片段切到 `data/web_clips/`
-- 当前版本优先保证粗筛链路可跑通；后续可再接入你提供的旧 YOLO11 模型，替换当前启发式含牌检测
+- 当前版本可通过任务 0.5 的预标注器 ONNX 替换启发式含牌检测：模型路径登记在 `configs/paths.yaml` 的 `prelabeler_onnx`
+
+## 任务 0.5：训练预标注模型
+
+任务 0.5 已补齐以下文件：
+
+- `docs/train_prelabeler.md`：训练、真实域验证、ONNX 导出和下游使用手册
+- `configs/prelabel_map.yaml`：Roboflow 27 类到本项目标签的映射表，`B=条`、`C=万`、`D=筒`
+- `configs/paths.yaml`：登记 `prelabeler_onnx`、`prelabeler_pt` 和源数据路径
+- `scripts/train_prelabeler.py`：跨平台训练/预测/导出入口
+- `scripts/train_prelabeler.sh`：bash 包装入口
+
+常用命令：
+
+```powershell
+py scripts/train_prelabeler.py --mode train
+py scripts/train_prelabeler.py --mode predict --source data/frames_selected --conf 0.25
+py scripts/train_prelabeler.py --mode export
+py -m pytest tests/test_prelabel_map.py
+```
+
+生成 X-AnyLabeling 预标注时可直接使用登记路径：
+
+```powershell
+py scripts/make_prelabel.py --input-root data/frames_selected --paths configs/paths.yaml --prelabel-map configs/prelabel_map.yaml --conf 0.25
+```
+
+
 
 ### 当前已支持能力
 
@@ -124,6 +243,7 @@ python scripts/screen_web_videos.py --input-root data/raw_videos --report data/w
 - 每次运行输出 `data/raw_videos/fetch_report.json`
 - 每个视频保留 `.info.json`
 - 随机 3~8 秒间隔、失败重试
+- B 站 412 限流处理：限量列表（`--list-limit`）、列表缓存（`--candidates-cache`）、配额跳过、指数退避重试
 
 ### 当前限制
 
@@ -166,17 +286,20 @@ X-AnyLabeling 是桌面端标注工具，不需要 Docker、自部署或单独�
 
 ### 3. 生成预标注 JSON
 
-在已有旧模型权重的前提下，可以先批量生成预标注：
+在已有任务 0.5 预标注器 ONNX 的前提下，可以先批量生成预标注：
 
 ```powershell
-python scripts/make_prelabel.py --input-root data/frames_selected --model weights/legacy.pt --classes configs/classes.yaml --conf 0.25
+python scripts/make_prelabel.py --input-root data/frames_selected --paths configs/paths.yaml --prelabel-map configs/prelabel_map.yaml --conf 0.25
 ```
 
 说明：
 
 - 脚本会对 `input-root` 下的每张图片生成一个同名 `.json`
+- 默认从 `configs/paths.yaml` 读取 `prelabeler_onnx`，也可以用 `--model` 显式覆盖
 - 输出格式为 X-AnyLabeling 可直接打开的 `rectangle` 标注
-- 如果旧模型预测出了不在 29 类清单里的类别，会自动映射成 `unknown`
+- `configs/prelabel_map.yaml` 会把预标注器 27 类映射到本项目的万/条/筒类别
+- 如果模型预测出了不在映射表或 29 类清单里的类别，会自动映射成 `unknown`
+
 
 ### 4. 在 X-AnyLabeling 中进行校正
 

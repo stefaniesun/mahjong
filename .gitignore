@@ -29,3 +29,10 @@ Thumbs.db
 build/
 dist/
 *.egg-info/
+
+# Dataset and generated media
+data/
+runs/
+*.pt
+
+

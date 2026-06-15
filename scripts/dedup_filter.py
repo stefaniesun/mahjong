@@ -4,13 +4,14 @@
 
 示例：
     python scripts/dedup_filter.py --input-root data/frames_candidate --output-root data/frames_selected --report data/frames_selected/selection_report.json --total 500
-    python scripts/dedup_filter.py --dry-run --filename-style B
+    python scripts/dedup_filter.py --dry-run --per-video-cap 8 --min-gap-sec 30
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import shutil
 from dataclasses import dataclass
@@ -26,6 +27,9 @@ SUPPORTED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 DEFAULT_TOTAL = 500
 DEFAULT_PHASH_DISTANCE_THRESHOLD = 8
 DEFAULT_MAX_SOURCE_RATIO = 0.25
+DEFAULT_PER_VIDEO_CAP = 8
+DEFAULT_MIN_GAP_SEC = 30.0
+DEFAULT_SOURCE_FPS = 30.0
 DEFAULT_FILENAME_STYLE = "B"
 
 
@@ -38,6 +42,8 @@ class FrameCandidate:
     path: Path
     source: str
     video_id: str
+    frame_number: int | None
+    timestamp_sec: float | None
     blur_score: float
     phash_hex: str
 
@@ -52,6 +58,7 @@ class FrameCandidate:
         return imagehash.hex_to_hash(self.phash_hex)
 
 
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="对候选帧做感知哈希去重与均衡采样")
     parser.add_argument("--input-root", default="data/frames_candidate", help="候选帧输入根目录")
@@ -60,9 +67,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--total", type=int, default=DEFAULT_TOTAL, help="目标总选帧数")
     parser.add_argument("--phash-distance-threshold", type=int, default=DEFAULT_PHASH_DISTANCE_THRESHOLD, help="感知哈希判重的最大汉明距离")
     parser.add_argument("--max-source-ratio", type=float, default=DEFAULT_MAX_SOURCE_RATIO, help="单博主占比上限，默认 0.25")
-    parser.add_argument("--max-per-video", type=int, default=0, help="单视频最多选中的帧数，0 表示自动按配额推导")
+    parser.add_argument("--per-video-cap", type=int, default=DEFAULT_PER_VIDEO_CAP, help="单视频最多选中的帧数，默认 8")
+    parser.add_argument("--min-gap-sec", type=float, default=DEFAULT_MIN_GAP_SEC, help="同一视频入选帧之间的最小时间间隔，默认 30 秒")
+    parser.add_argument("--source-fps", type=float, default=DEFAULT_SOURCE_FPS, help="从文件名帧号估算时间戳时使用的源视频帧率，默认 30")
     parser.add_argument("--filename-style", default=DEFAULT_FILENAME_STYLE, choices=["A", "B"], help="输出文件命名风格，默认 B")
     parser.add_argument("--dry-run", action="store_true", help="仅生成报告，不复制图片")
+    parser.add_argument("--clean-output", action="store_true", help="复制前清空输出目录中的旧图片与旧报告")
     return parser.parse_args(argv)
 
 
@@ -79,7 +89,24 @@ def compute_phash(image_path: Path) -> str:
         return str(imagehash.phash(image))
 
 
-def collect_frame_candidates(input_root: Path) -> list[FrameCandidate]:
+def parse_frame_number(image_path: Path) -> int | None:
+    """从 `{video}_f000001.jpg` 文件名中解析原视频帧号。"""
+    match = re.search(r"_f(\d+)$", image_path.stem)
+    if not match:
+        return None
+    return int(match.group(1))
+
+
+def estimate_timestamp_sec(frame_number: int | None, source_fps: float) -> float | None:
+    """根据原视频帧号和源视频 FPS 估算时间戳。"""
+    if frame_number is None:
+        return None
+    if source_fps <= 0:
+        raise DedupFilterError("--source-fps 必须大于 0")
+    return frame_number / source_fps
+
+
+def collect_frame_candidates(input_root: Path, *, source_fps: float = DEFAULT_SOURCE_FPS) -> list[FrameCandidate]:
     if not input_root.exists():
         raise DedupFilterError(f"输入目录不存在: {input_root}")
 
@@ -101,16 +128,20 @@ def collect_frame_candidates(input_root: Path) -> list[FrameCandidate]:
                 video_id = stem.rsplit("_f", 1)[0]
             else:
                 video_id = stem
+        frame_number = parse_frame_number(path)
         candidates.append(
             FrameCandidate(
                 path=path,
                 source=source,
                 video_id=video_id,
+                frame_number=frame_number,
+                timestamp_sec=estimate_timestamp_sec(frame_number, source_fps),
                 blur_score=compute_blur_score(path),
                 phash_hex=compute_phash(path),
             )
         )
     return candidates
+
 
 
 
@@ -151,10 +182,65 @@ def _compute_source_caps(source_names: list[str], *, total: int, max_source_rati
     if not 0 < max_source_ratio <= 1:
         raise DedupFilterError("--max-source-ratio 必须在 0 到 1 之间")
 
-    equal_quota = max(total // len(source_names), 1)
+    equal_quota = math.ceil(total / len(source_names))
     ratio_cap = max(int(total * max_source_ratio), 1)
-    return {source: max(equal_quota, ratio_cap) for source in source_names}
+    per_source_cap = min(equal_quota, ratio_cap)
+    return {source: per_source_cap for source in source_names}
 
+
+
+
+def _video_counts(items: list[FrameCandidate]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for item in items:
+        counts[item.video_id] = counts.get(item.video_id, 0) + 1
+    return counts
+
+
+def _passes_min_gap(item: FrameCandidate, selected: list[FrameCandidate], min_gap_sec: float) -> bool:
+    if min_gap_sec <= 0 or item.timestamp_sec is None:
+        return True
+    for existing in selected:
+        if existing.video_id != item.video_id or existing.timestamp_sec is None:
+            continue
+        if abs(item.timestamp_sec - existing.timestamp_sec) < min_gap_sec:
+            return False
+    return True
+
+
+def _pick_best_candidate(
+    candidates: list[FrameCandidate],
+    selected: list[FrameCandidate],
+    *,
+    per_video_cap: int,
+    min_gap_sec: float,
+) -> FrameCandidate | None:
+    counts_by_video = _video_counts(selected)
+    selected_by_video: dict[str, list[FrameCandidate]] = {}
+    for item in selected:
+        selected_by_video.setdefault(item.video_id, []).append(item)
+
+    available = [item for item in candidates if item not in selected]
+    available.sort(
+        key=lambda item: (
+            counts_by_video.get(item.video_id, 0),
+            item.video_id in counts_by_video,
+            item.timestamp_sec if item.timestamp_sec is not None else 0.0,
+            -item.blur_score,
+            item.video_id,
+            item.path.name,
+        )
+    )
+
+    fallback: FrameCandidate | None = None
+    for item in available:
+        if counts_by_video.get(item.video_id, 0) >= per_video_cap:
+            continue
+        if fallback is None:
+            fallback = item
+        if _passes_min_gap(item, selected_by_video.get(item.video_id, []), min_gap_sec):
+            return item
+    return fallback
 
 
 def plan_selection(
@@ -162,16 +248,16 @@ def plan_selection(
     *,
     total: int,
     max_source_ratio: float,
-    max_per_video: int,
+    per_video_cap: int,
+    min_gap_sec: float,
 ) -> dict[str, list[FrameCandidate]]:
+    if per_video_cap <= 0:
+        raise DedupFilterError("--per-video-cap 必须大于 0")
+    if min_gap_sec < 0:
+        raise DedupFilterError("--min-gap-sec 不能小于 0")
+
     source_caps = _compute_source_caps(list(items_by_source.keys()), total=total, max_source_ratio=max_source_ratio)
     selected: dict[str, list[FrameCandidate]] = {source: [] for source in items_by_source}
-
-    per_source_video_limit: dict[str, int] = {}
-    for source, items in items_by_source.items():
-        videos = {item.video_id for item in items}
-        auto_limit = max(1, source_caps[source] // max(len(videos), 1))
-        per_source_video_limit[source] = max_per_video if max_per_video > 0 else auto_limit
 
     remaining = total
     made_progress = True
@@ -184,37 +270,21 @@ def plan_selection(
             if len(current) >= source_caps[source]:
                 continue
 
-            counts_by_video: dict[str, int] = {}
-            for item in current:
-                counts_by_video[item.video_id] = counts_by_video.get(item.video_id, 0) + 1
-
-            candidates = [item for item in items_by_source[source] if item not in current]
-            candidates.sort(
-                key=lambda item: (
-                    counts_by_video.get(item.video_id, 0),
-                    item.video_id in counts_by_video,
-                    -item.blur_score,
-                    item.video_id,
-                    item.path.name,
-                )
+            picked = _pick_best_candidate(
+                items_by_source[source],
+                current,
+                per_video_cap=per_video_cap,
+                min_gap_sec=min_gap_sec,
             )
-
-
-            picked: FrameCandidate | None = None
-            for item in candidates:
-                if counts_by_video.get(item.video_id, 0) >= per_source_video_limit[source]:
-                    continue
-                picked = item
-                break
             if picked is None:
                 continue
 
             current.append(picked)
-
             remaining -= 1
             made_progress = True
 
-    return {source: sorted(items, key=lambda item: (item.video_id, item.path.name)) for source, items in selected.items() if items}
+    return {source: sorted(items, key=lambda item: (item.video_id, item.frame_number or 0, item.path.name)) for source, items in selected.items() if items}
+
 
 
 def build_output_name(item: FrameCandidate, *, filename_style: str) -> str:
@@ -257,6 +327,11 @@ def build_report(
     selected_files: list[dict[str, str]],
     dry_run: bool,
     total_requested: int,
+    phash_distance_threshold: int,
+    max_source_ratio: float,
+    per_video_cap: int,
+    min_gap_sec: float,
+    source_fps: float,
 ) -> dict[str, Any]:
     sources_payload: dict[str, Any] = {}
     for source in sorted(candidates_by_source):
@@ -265,33 +340,53 @@ def build_report(
         source_selected = selection_plan.get(source, [])
 
         video_candidate_counts: dict[str, int] = {}
-        video_selected_counts: dict[str, int] = {}
+        video_deduped_counts: dict[str, int] = {}
+        video_selected: dict[str, list[FrameCandidate]] = {}
         for item in source_candidates:
             video_candidate_counts[item.video_id] = video_candidate_counts.get(item.video_id, 0) + 1
+        for item in source_deduped:
+            video_deduped_counts[item.video_id] = video_deduped_counts.get(item.video_id, 0) + 1
         for item in source_selected:
-            video_selected_counts[item.video_id] = video_selected_counts.get(item.video_id, 0) + 1
+            video_selected.setdefault(item.video_id, []).append(item)
 
         sources_payload[source] = {
             "candidate_frames": len(source_candidates),
             "deduped_frames": len(source_deduped),
+            "dropped_duplicate_frames": len(source_candidates) - len(source_deduped),
             "selected_frames": len(source_selected),
             "videos": [
                 {
                     "video_id": video_id,
                     "candidate_frames": video_candidate_counts[video_id],
-                    "selected_frames": video_selected_counts.get(video_id, 0),
+                    "deduped_frames": video_deduped_counts.get(video_id, 0),
+                    "selected_frames": len(video_selected.get(video_id, [])),
+                    "selected_timestamps_sec": [
+                        round(item.timestamp_sec, 3) for item in video_selected.get(video_id, []) if item.timestamp_sec is not None
+                    ],
                 }
                 for video_id in sorted(video_candidate_counts)
             ],
         }
 
+    candidate_total = sum(len(items) for items in candidates_by_source.values())
+    deduped_total = sum(len(items) for items in deduped_by_source.values())
+    selected_total = sum(len(items) for items in selection_plan.values())
     return {
         "dry_run": dry_run,
+        "params": {
+            "total": total_requested,
+            "phash_distance_threshold": phash_distance_threshold,
+            "max_source_ratio": max_source_ratio,
+            "per_video_cap": per_video_cap,
+            "min_gap_sec": min_gap_sec,
+            "source_fps": source_fps,
+        },
         "summary": {
             "total_requested": total_requested,
-            "candidate_frames": sum(len(items) for items in candidates_by_source.values()),
-            "deduped_frames": sum(len(items) for items in deduped_by_source.values()),
-            "selected_frames": sum(len(items) for items in selection_plan.values()),
+            "candidate_frames": candidate_total,
+            "deduped_frames": deduped_total,
+            "dropped_duplicate_frames": candidate_total - deduped_total,
+            "selected_frames": selected_total,
             "selected_sources": sum(1 for items in selection_plan.values() if items),
         },
         "sources": sources_payload,
@@ -299,9 +394,23 @@ def build_report(
     }
 
 
+
 def save_report(report_path: Path, payload: dict[str, Any]) -> None:
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def clean_output(output_root: Path, report_path: Path) -> None:
+    """清理上一次选择输出，避免旧图片混入本次结果。"""
+    if output_root.exists():
+        for path in output_root.rglob("*"):
+            if path.is_file() and (path.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS or path == report_path):
+                path.unlink()
+        for path in sorted([p for p in output_root.rglob("*") if p.is_dir()], reverse=True):
+            try:
+                path.rmdir()
+            except OSError:
+                pass
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -310,7 +419,10 @@ def main(argv: list[str] | None = None) -> int:
     output_root = Path(args.output_root).expanduser().resolve()
     report_path = Path(args.report).expanduser().resolve()
 
-    candidates = collect_frame_candidates(input_root)
+    if args.clean_output and not args.dry_run:
+        clean_output(output_root, report_path)
+
+    candidates = collect_frame_candidates(input_root, source_fps=args.source_fps)
     candidates_by_source = group_candidates_by_source(candidates)
     deduped_by_source = deduplicate_source_candidates(
         candidates_by_source,
@@ -320,7 +432,8 @@ def main(argv: list[str] | None = None) -> int:
         deduped_by_source,
         total=args.total,
         max_source_ratio=args.max_source_ratio,
-        max_per_video=args.max_per_video,
+        per_video_cap=args.per_video_cap,
+        min_gap_sec=args.min_gap_sec,
     )
 
     selected_files: list[dict[str, str]] = []
@@ -330,6 +443,10 @@ def main(argv: list[str] | None = None) -> int:
                 {
                     "source": source,
                     "video_id": item.video_id,
+                    "frame_number": item.frame_number,
+                    "timestamp_sec": item.timestamp_sec,
+                    "blur_score": item.blur_score,
+                    "phash": item.phash_hex,
                     "original_path": str(item.path),
                     "target_name": build_output_name(item, filename_style=args.filename_style),
                 }
@@ -348,6 +465,11 @@ def main(argv: list[str] | None = None) -> int:
         selected_files=selected_files,
         dry_run=args.dry_run,
         total_requested=args.total,
+        phash_distance_threshold=args.phash_distance_threshold,
+        max_source_ratio=args.max_source_ratio,
+        per_video_cap=args.per_video_cap,
+        min_gap_sec=args.min_gap_sec,
+        source_fps=args.source_fps,
     )
     save_report(report_path, report_payload)
     print(f"筛选完成：选中 {report_payload['summary']['selected_frames']} 张，报告写入 {report_path}")

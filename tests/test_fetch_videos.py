@@ -219,10 +219,23 @@ class FetchVideosTests(unittest.TestCase):
             url="https://space.bilibili.com/123",
             name="demo",
         )
-        args = fetch_videos.parse_args(["--dry-run", "--browser", ""])
-        state = {"downloaded": {}}
+        with tempfile.TemporaryDirectory() as tmp:
+            args = fetch_videos.parse_args(
+                [
+                    "--dry-run",
+                    "--browser",
+                    "",
+                    "--author-gap-min",
+                    "0",
+                    "--author-gap-max",
+                    "0",
+                    "--output-root",
+                    tmp,
+                ]
+            )
+            state = {"downloaded": {}}
 
-        report = fetch_videos.process_source(source, args, state)
+            report = fetch_videos.process_source(source, args, state, {}, None)
 
         self.assertEqual(report.downloaded, 0)
         self.assertEqual(report.dry_run_candidates, ["https://www.bilibili.com/video/BV1"])

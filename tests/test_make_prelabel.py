@@ -14,10 +14,17 @@ class MakePrelabelTests(unittest.TestCase):
             input_dir = root / "frames_selected"
             classes_path = root / "classes.yaml"
             model_path = root / "legacy.pt"
+            paths_path = root / "paths.yaml"
+            map_path = root / "prelabel_map.yaml"
             input_dir.mkdir(parents=True)
             model_path.write_bytes(b"fake-model")
+            paths_path.write_text(f"prelabeler_onnx: {model_path.as_posix()}\n", encoding="utf-8")
+            map_path.write_text(
+                "map:\n  1C: {det: tile_face, cls: w1}\n  2B: {det: tile_face, cls: t2}\n",
+                encoding="utf-8",
+            )
             classes_path.write_text(
-                "detection:\n  0: tile_face\n  1: tile_back\n\nclassification:\n  - [w1, w2]\n  - [back]\n  - [unknown]\n",
+                "detection:\n  0: tile_face\n  1: tile_back\n\nclassification:\n  - [w1, w2]\n  - [t1, t2]\n  - [back]\n  - [unknown]\n",
                 encoding="utf-8",
             )
             image_path = input_dir / "bili_123__clip001__f000001.jpg"
@@ -28,10 +35,12 @@ class MakePrelabelTests(unittest.TestCase):
                     [
                         "--input-root",
                         str(input_dir),
-                        "--model",
-                        str(model_path),
+                        "--paths",
+                        str(paths_path),
                         "--classes",
                         str(classes_path),
+                        "--prelabel-map",
+                        str(map_path),
                         "--conf",
                         "0.25",
                     ]
@@ -106,7 +115,7 @@ class FakeResult:
 
 
 class FakeModel:
-    names = {0: "w1", 2: "back", 5: "dragon_red"}
+    names = {0: "1C", 2: "back", 5: "dragon_red"}
 
     def predict(self, source, conf, verbose):
         return [FakeResult()]

@@ -44,6 +44,8 @@ class DedupFilterTests(unittest.TestCase):
                             path=Path(f"{source_name}/video_{video_idx}/frame_{frame_idx}.jpg"),
                             source=source_name,
                             video_id=f"video_{video_idx}",
+                            frame_number=frame_idx * 900,
+                            timestamp_sec=frame_idx * 30.0,
                             blur_score=100.0 - frame_idx,
                             phash_hex=f"{source_name}-{video_idx}-{frame_idx}",
                         )
@@ -56,13 +58,39 @@ class DedupFilterTests(unittest.TestCase):
             },
             total=8,
             max_source_ratio=0.25,
-            max_per_video=1,
+            per_video_cap=1,
+            min_gap_sec=30,
         )
 
         self.assertEqual(sum(len(value) for value in plan.values()), 8)
         for source, selected in plan.items():
             self.assertLessEqual(len(selected), 2)
             self.assertEqual(len({item.video_id for item in selected}), len(selected))
+
+    def test_plan_selection_respects_min_gap_when_possible(self) -> None:
+        items = [
+            dedup_filter.FrameCandidate(
+                path=Path(f"bili_1/video_a/video_a_f{idx:06d}.jpg"),
+                source="bili_1",
+                video_id="video_a",
+                frame_number=idx,
+                timestamp_sec=timestamp,
+                blur_score=100.0 - order,
+                phash_hex=f"hash-{idx}",
+            )
+            for order, (idx, timestamp) in enumerate([(30, 1.0), (60, 2.0), (960, 32.0), (1860, 62.0)])
+        ]
+
+        plan = dedup_filter.plan_selection(
+            {"bili_1": items},
+            total=3,
+            max_source_ratio=1.0,
+            per_video_cap=8,
+            min_gap_sec=30,
+        )
+
+        selected_times = [item.timestamp_sec for item in plan["bili_1"]]
+        self.assertEqual(selected_times, [1.0, 32.0, 62.0])
 
     def test_main_dry_run_writes_report_without_copying_files_and_uses_format_b_names(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -86,7 +114,7 @@ class DedupFilterTests(unittest.TestCase):
                     "4",
                     "--max-source-ratio",
                     "0.5",
-                    "--max-per-video",
+                    "--per-video-cap",
                     "1",
                     "--filename-style",
                     "B",
@@ -105,13 +133,12 @@ class DedupFilterTests(unittest.TestCase):
             first_name = payload["selected_files"][0]["target_name"]
             self.assertRegex(first_name, r"^(bili|dy)_\d+__video_\d+__f\d{6}\.jpg$")
 
-
     def test_main_copies_selected_files_and_report_matches_disk(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             input_root = root / "frames_candidate"
             output_root = root / "frames_selected"
-            report_path = root / "selection_report.json"
+            report_path = root / "frames_selected" / "selection_report.json"
 
             self._write_candidate_set(input_root / "bili_111", video_count=2, frames_per_video=3)
             self._write_candidate_set(input_root / "dy_222", video_count=2, frames_per_video=3)
@@ -128,7 +155,7 @@ class DedupFilterTests(unittest.TestCase):
                     "4",
                     "--max-source-ratio",
                     "0.5",
-                    "--max-per-video",
+                    "--per-video-cap",
                     "2",
                     "--filename-style",
                     "B",
@@ -147,7 +174,7 @@ class DedupFilterTests(unittest.TestCase):
             video_dir = source_dir / f"video_{video_idx}"
             video_dir.mkdir(parents=True, exist_ok=True)
             for frame_idx in range(frames_per_video):
-                path = video_dir / f"video_{video_idx}_f{frame_idx + 1:06d}.jpg"
+                path = video_dir / f"video_{video_idx}_f{frame_idx * 900 + 1:06d}.jpg"
                 self._write_pattern_image(path, stripe_step=4 + frame_idx + video_idx)
 
     def _write_pattern_image(self, path: Path, *, stripe_step: int) -> None:
@@ -160,3 +187,4 @@ class DedupFilterTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

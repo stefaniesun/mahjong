@@ -27,6 +27,12 @@ DEFAULT_MAX_VIDEOS = 20
 DEFAULT_SLEEP_MIN = 3.0
 DEFAULT_SLEEP_MAX = 8.0
 DEFAULT_RETRIES = 2
+DEFAULT_LIST_RETRIES = 4
+DEFAULT_AUTHOR_GAP_MIN = 10.0
+DEFAULT_AUTHOR_GAP_MAX = 20.0
+DEFAULT_LIST_BACKOFF_BASE = 30.0
+DEFAULT_LIST_BACKOFF_MAX = 300.0
+DEFAULT_LIST_LIMIT = 40
 BILI_DIR_PREFIX = "bili"
 DOUYIN_DIR_PREFIX = "dy"
 SUPPORTED_PLATFORMS = {BILI_DIR_PREFIX, DOUYIN_DIR_PREFIX}
@@ -112,6 +118,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--state", default="data/raw_videos/download_state.json", help="下载状态 JSON 路径")
     parser.add_argument("--report", default="data/raw_videos/fetch_report.json", help="抓取报告 JSON 路径")
     parser.add_argument("--cookies", default="", help="Netscape 格式 Cookie 文件路径，优先级高于浏览器直读")
+    parser.add_argument("--proxy", default=None, help="传给 yt-dlp 的代理地址；传空字符串可禁用环境代理")
     parser.add_argument(
         "--browser",
         choices=["chrome", "edge", "firefox", ""],
@@ -124,6 +131,52 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--sleep-min", type=float, default=DEFAULT_SLEEP_MIN, help="请求间隔最小秒数")
     parser.add_argument("--sleep-max", type=float, default=DEFAULT_SLEEP_MAX, help="请求间隔最大秒数")
     parser.add_argument("--retries", type=int, default=DEFAULT_RETRIES, help="单视频失败后的重试次数")
+    parser.add_argument(
+        "--list-retries",
+        type=int,
+        default=DEFAULT_LIST_RETRIES,
+        help="空间列表请求失败的重试次数，主要用于应对 B 站 412 限流",
+    )
+    parser.add_argument(
+        "--author-gap-min",
+        type=float,
+        default=DEFAULT_AUTHOR_GAP_MIN,
+        help="不同博主之间的最小间隔秒数（礼貌限速，规避 B 站 412）",
+    )
+    parser.add_argument(
+        "--author-gap-max",
+        type=float,
+        default=DEFAULT_AUTHOR_GAP_MAX,
+        help="不同博主之间的最大间隔秒数",
+    )
+    parser.add_argument(
+        "--list-backoff-base",
+        type=float,
+        default=DEFAULT_LIST_BACKOFF_BASE,
+        help="列表请求遭遇 412 后的首次退避秒数，按 2 的幂递增（30→60→120…）",
+    )
+    parser.add_argument(
+        "--list-backoff-max",
+        type=float,
+        default=DEFAULT_LIST_BACKOFF_MAX,
+        help="列表请求 412 退避的单次上限秒数",
+    )
+    parser.add_argument(
+        "--candidates-cache",
+        default="data/raw_videos/_candidates_cache.json",
+        help="博主视频列表缓存路径；成功拉取一次即持久化，重跑直接复用以规避 412",
+    )
+    parser.add_argument(
+        "--refresh-list",
+        action="store_true",
+        help="忽略列表缓存与配额，强制重新拉取每个博主的视频列表",
+    )
+    parser.add_argument(
+        "--list-limit",
+        type=int,
+        default=DEFAULT_LIST_LIMIT,
+        help="拉取空间列表时只取最新 N 个视频（避免翻遍整个空间触发 B 站 412）",
+    )
     parser.add_argument("--download-archive", default="", help="可选：传给 yt-dlp 的下载归档文件")
     parser.add_argument(
         "--douyin-manifest",
@@ -254,14 +307,18 @@ def save_json(path: Path, payload: dict[str, Any] | list[Any]) -> None:
 
 
 def ensure_cookie_args(args: argparse.Namespace) -> list[str]:
+    extra_args = []
+    if args.proxy is not None:
+        extra_args.extend(["--proxy", args.proxy])
+
     cookie_path = Path(args.cookies).expanduser() if args.cookies else None
     if cookie_path:
         if not cookie_path.exists():
             raise FetchVideosError(f"Cookie 文件不存在: {cookie_path}")
-        return ["--cookies", str(cookie_path)]
+        return extra_args + ["--cookies", str(cookie_path)]
     if args.browser:
-        return ["--cookies-from-browser", args.browser]
-    return []
+        return extra_args + ["--cookies-from-browser", args.browser]
+    return extra_args
 
 
 def get_cookie_path(args: argparse.Namespace) -> Path | None:
@@ -313,6 +370,92 @@ def sleep_with_jitter(min_seconds: float, max_seconds: float) -> None:
     time.sleep(random.uniform(min_seconds, max_seconds))
 
 
+def is_rate_limited(exc: subprocess.CalledProcessError) -> bool:
+    """识别 B 站空间列表的 412 限流错误。"""
+    blob = f"{exc.stderr or ''}{exc.stdout or ''}"
+    return "412" in blob or "blocked by server" in blob.lower()
+
+
+def run_listing_with_backoff(command: list[str], args: argparse.Namespace) -> subprocess.CompletedProcess[str]:
+    """列表请求专用重试：命中 412 时按指数退避（30→60→120…）长时间等待。"""
+    attempts = max(args.list_retries, 0) + 1
+    last_error: subprocess.CalledProcessError | None = None
+    for attempt in range(attempts):
+        try:
+            return run_command(command)
+        except subprocess.CalledProcessError as exc:
+            last_error = exc
+            if attempt >= attempts - 1:
+                break
+            if is_rate_limited(exc):
+                wait = min(args.list_backoff_base * (2 ** attempt), args.list_backoff_max)
+            else:
+                wait = random.uniform(args.author_gap_min, args.author_gap_max)
+            time.sleep(wait + random.uniform(0.0, 3.0))
+    assert last_error is not None
+    raise last_error
+
+
+def candidate_to_dict(candidate: VideoCandidate) -> dict[str, Any]:
+    return {
+        "id": candidate.id,
+        "title": candidate.title,
+        "url": candidate.url,
+        "webpage_url": candidate.webpage_url,
+        "uploader": candidate.uploader,
+        "upload_date": candidate.upload_date,
+        "extractor": candidate.extractor,
+    }
+
+
+def candidate_from_dict(data: dict[str, Any]) -> VideoCandidate:
+    return VideoCandidate(
+        id=str(data.get("id", "")),
+        title=str(data.get("title", "")) or str(data.get("id", "")),
+        url=str(data.get("url") or data.get("webpage_url", "")),
+        webpage_url=str(data.get("webpage_url") or data.get("url", "")),
+        uploader=str(data.get("uploader", "")),
+        upload_date=data.get("upload_date"),
+        extractor=str(data.get("extractor", "")),
+        raw={},
+    )
+
+
+def load_candidates_cache(path: Path | None) -> dict[str, list[dict[str, Any]]]:
+    if path is None or not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise FetchVideosError(f"列表缓存不是合法 JSON: {path}") from exc
+    return data if isinstance(data, dict) else {}
+
+
+def list_videos_for_source(
+    source: SourceEntry,
+    args: argparse.Namespace,
+    cache: dict[str, list[dict[str, Any]]],
+    cache_path: Path | None,
+) -> list[VideoCandidate]:
+    """优先复用列表缓存；缓存未命中时拉取一次并持久化，避免重跑反复请求触发 412。"""
+    if not args.refresh_list and source.source_key in cache:
+        return [candidate_from_dict(item) for item in cache[source.source_key]]
+
+    # 真正发起网络列表请求前留出较长间隔，避免连续请求空间页触发 B 站 412 限流。
+    sleep_with_jitter(args.author_gap_min, args.author_gap_max)
+    if source.platform == BILI_DIR_PREFIX:
+        videos = list_bili_videos(source, args)
+    elif source.platform == DOUYIN_DIR_PREFIX:
+        videos = list_douyin_videos(source, args)
+    else:
+        raise FetchVideosError(f"不支持的平台: {source.platform}")
+
+    cache[source.source_key] = [candidate_to_dict(video) for video in videos]
+    if cache_path is not None:
+        save_json(cache_path, cache)
+    return videos
+
+
 def list_bili_videos(source: SourceEntry, args: argparse.Namespace) -> list[VideoCandidate]:
     command = [
         sys.executable,
@@ -320,10 +463,17 @@ def list_bili_videos(source: SourceEntry, args: argparse.Namespace) -> list[Vide
         "yt_dlp",
         "--flat-playlist",
         "--dump-single-json",
-        source.url,
+        # 只取最新 N 个，避免翻遍整个空间（上千视频会发起几十次分页请求直接触发 412）。
+        "--playlist-end",
+        str(max(args.list_limit, 1)),
+        # 给少量分页请求之间留出间隔，进一步降低限流概率。
+        "--sleep-requests",
+        "2",
     ]
     command.extend(ensure_cookie_args(args))
-    completed = run_command(command)
+    command.append(source.url)
+    # 空间列表请求最易触发 B 站 412 限流，命中后按指数退避长时间等待重试。
+    completed = run_listing_with_backoff(command, args)
     payload = json.loads(completed.stdout)
     entries = payload.get("entries", []) if isinstance(payload, dict) else []
     videos: list[VideoCandidate] = []
@@ -480,7 +630,16 @@ def info_path_for_video(output_dir: Path, candidate: VideoCandidate) -> Path:
 
 
 def existing_video_files(output_dir: Path, candidate: VideoCandidate) -> list[Path]:
-    return [path for path in output_dir.glob(f"{candidate.id}.*") if path.suffix.lower() not in {".json", ".part", ".ytdl"}]
+    # 下载命名为 {id}_{title}.ext，因此既要匹配 {id}.* 也要匹配 {id}_*，
+    # 否则部分下载的博主在重跑时会被整体重复下载。
+    skip_suffixes = {".json", ".part", ".ytdl"}
+    matches: dict[str, Path] = {}
+    for pattern in (f"{candidate.id}.*", f"{candidate.id}_*"):
+        for path in output_dir.glob(pattern):
+            if path.suffix.lower() in skip_suffixes:
+                continue
+            matches[path.name] = path
+    return list(matches.values())
 
 
 def download_bili_video(source: SourceEntry, candidate: VideoCandidate, output_dir: Path, args: argparse.Namespace) -> None:
@@ -534,25 +693,27 @@ def mark_downloaded(state: dict[str, Any], source: SourceEntry, candidate: Video
     }
 
 
-def process_source(source: SourceEntry, args: argparse.Namespace, state: dict[str, Any]) -> AuthorReport:
-
-
-
-
+def process_source(
+    source: SourceEntry,
+    args: argparse.Namespace,
+    state: dict[str, Any],
+    cache: dict[str, list[dict[str, Any]]],
+    cache_path: Path | None,
+) -> AuthorReport:
     output_dir = Path(args.output_root).expanduser() / source.output_dirname
     output_dir.mkdir(parents=True, exist_ok=True)
     report = AuthorReport(source=source.source_key, platform=source.platform, output_dir=str(output_dir))
     downloaded_ids = set(state.get("downloaded", {}).get(source.source_key, {}).keys())
 
-    if source.platform == BILI_DIR_PREFIX:
-        candidates = list_bili_videos(source, args)
-    elif source.platform == DOUYIN_DIR_PREFIX:
-        candidates = list_douyin_videos(source, args)
-    else:
-        raise FetchVideosError(f"不支持的平台: {source.platform}")
+    max_videos = args.max_videos_override or source.max_videos or DEFAULT_MAX_VIDEOS
+    # 配额已满的博主直接跳过：不再请求空间列表，避免无谓地触发 B 站 412 限流。
+    if not args.refresh_list and not args.dry_run and len(downloaded_ids) >= max_videos:
+        report.skipped_state = len(downloaded_ids)
+        return report
+
+    candidates = list_videos_for_source(source, args, cache, cache_path)
 
     report.discovered = len(candidates)
-    max_videos = args.max_videos_override or source.max_videos or DEFAULT_MAX_VIDEOS
     matched, skipped_keyword, skipped_state = filter_candidates(source, candidates, downloaded_ids, max_videos)
     report.matched = len(matched)
     report.skipped_keyword = skipped_keyword
@@ -610,9 +771,19 @@ def main() -> int:
             raise FetchVideosError("没有可处理的 source 条目")
         state_path = Path(args.state).expanduser()
         state = load_state(state_path)
+        cache_path = Path(args.candidates_cache).expanduser() if args.candidates_cache else None
+        cache = load_candidates_cache(cache_path)
         reports: list[dict[str, Any]] = []
         for source in sources:
-            report = process_source(source, args, state)
+            try:
+                report = process_source(source, args, state, cache, cache_path)
+            except subprocess.CalledProcessError as exc:
+                output_dir = Path(args.output_root).expanduser() / source.output_dirname
+                report = AuthorReport(source=source.source_key, platform=source.platform, output_dir=str(output_dir))
+                report.failed = 1
+                stderr = (exc.stderr or exc.stdout or "").strip().splitlines()
+                reason = stderr[-1] if stderr else f"exit code {exc.returncode}"
+                report.failures.append(f"{source.url} :: {reason}")
             reports.append(report.to_dict())
             if not args.dry_run:
                 save_json(state_path, state)

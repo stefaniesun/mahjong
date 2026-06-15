@@ -1,0 +1,5 @@
+# 项目关键路径登记
+# 任务 0.5 预标注器产物路径。
+prelabeler_onnx: E:/360MoveData/Users/Administrator/Desktop/model/best.onnx
+prelabeler_pt: E:/360MoveData/Users/Administrator/Desktop/model/best.pt
+prelabel_source_data: E:/360MoveData/Users/Administrator/Desktop/Mahjong.v1i.yolov11/data.yaml
