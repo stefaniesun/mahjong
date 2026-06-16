@@ -1,5 +1,37 @@
-# 项目关键路径登记
-# 任务 0.5 预标注器产物路径。
+# 迭代预标注器数据与产物路径配置
+# 所有脚本默认从本文件读取路径，避免每轮手工改命令。
+
+# 真实精标数据：X-AnyLabeling 格式，图片与同名 .json 累加放入此目录。
+prelabel_labeled_root: D:/mahjong/data/labeled
+
+# Roboflow YOLO 数据集根目录；固定不变，只在迁移机器时改这里。
+prelabel_roboflow_root: E:/360MoveData/Users/Administrator/Desktop/Mahjong.v1i.yolov11
+prelabel_roboflow_data: E:/360MoveData/Users/Administrator/Desktop/Mahjong.v1i.yolov11/data.yaml
+
+
+# 每轮组装的混合集与固定真实验证集。
+prelabel_datasets_root: D:/mahjong/datasets
+prelabel_real_val_root: D:/mahjong/datasets/real_val
+
+# 每轮训练、评测、导出的版本化产物。
+prelabel_runs_root: D:/mahjong/runs
+prelabel_exports_root: D:/mahjong/output/prelabeler_exports
+prelabel_eval_root: D:/mahjong/output/prelabeler_eval
+prelabel_prelabels_root: D:/mahjong/output/prelabels
+
+# 最新预标注器固定入口；export_prelabeler.py 每轮更新它们。
+prelabeler_latest_pt: D:/mahjong/runs/prelabeler_latest/weights/best.pt
+prelabeler_latest_onnx: D:/mahjong/output/prelabeler_exports/prelabeler_latest.onnx
+
+# 兼容旧版 Phase 0 脚本字段。
 prelabeler_onnx: E:/360MoveData/Users/Administrator/Desktop/model/best.onnx
 prelabeler_pt: E:/360MoveData/Users/Administrator/Desktop/model/best.pt
 prelabel_source_data: E:/360MoveData/Users/Administrator/Desktop/Mahjong.v1i.yolov11/data.yaml
+validation_labeled: data/labeled
+validation_output: output/validation_run_v1
+label_preview_output: output/label_preview
+validation_yolo_data: D:/mahjong/output/validation_run_v1/yolo_det/data.yaml
+validation_run_dir: D:/mahjong/runs/val_run_v1/detector
+validation_best_pt: D:/mahjong/runs/val_run_v1/detector/weights/best.pt
+validation_report_html: D:/mahjong/output/validation_report.html
+validation_check_output: D:/mahjong/output/check

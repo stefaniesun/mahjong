@@ -1,0 +1,37 @@
+# 预标注器滚动迭代训练配置
+# 目标：每轮只改 version 或少量参数，即可复现 prepare -> train -> eval -> export -> prelabel 全流程。
+
+version: 1
+seed: 20260615
+
+# 数据组装：以真实数据在训练采样中的“有效占比”为控制目标。
+# 真实牌局数据负责教会模型牌池/小目标/遮挡/斜牌；Roboflow 负责补充牌面外观多样性。
+# 真实占比太低会被 Roboflow 淹没，太高则在早期容易过拟合；70~150 张阶段建议 0.30~0.35。
+real_effective_ratio: 0.35
+real_val_ratio_per_author: 0.15
+min_val_per_author: 1
+
+# Roboflow 可全量进训练；后续真实数据超过 800 张时可调低或关闭。
+use_roboflow: true
+roboflow_sample_limit: null
+
+# 训练参数。
+model: yolo11s.pt
+imgsz: 960
+epochs: 80
+batch: auto
+patience: 20
+workers: 4
+
+# 小目标增强：后续 train_prelabeler.py 可用该开关选择 P2 结构配置。
+use_p2: true
+
+# 增广约束：麻将牌文字/花色不应水平翻转。
+augment:
+  mosaic: 0.5
+  mixup: 0.0
+  fliplr: 0.0
+  flipud: 0.0
+
+# 推理/预标注默认阈值：宁可多框一点，人工删除；不要漏掉牌池小牌。
+prelabel_conf: 0.25

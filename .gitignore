@@ -32,7 +32,17 @@ dist/
 
 # Dataset and generated media
 data/
+datasets/
+output/
 runs/
+mahjong-prelabeler/
 *.pt
+*.onnx
+
+
+
+
+
+
 
 
