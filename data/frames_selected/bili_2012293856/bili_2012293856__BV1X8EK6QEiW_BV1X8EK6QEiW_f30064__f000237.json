@@ -1,0 +1,214 @@
+{
+  "version": "2.4.0",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "t9",
+      "points": [
+        [
+          440.433837890625,
+          589.47900390625
+        ],
+        [
+          504.0345153808594,
+          648.74853515625
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t5",
+      "points": [
+        [
+          506.66693115234375,
+          589.7186889648438
+        ],
+        [
+          568.4613647460938,
+          646.6053466796875
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t9",
+      "points": [
+        [
+          371.70330810546875,
+          589.853271484375
+        ],
+        [
+          437.1126403808594,
+          650.0338745117188
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "b2",
+      "points": [
+        [
+          155.0751190185547,
+          588.6812744140625
+        ],
+        [
+          227.158203125,
+          655.2852172851562
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t5",
+      "points": [
+        [
+          634.0260620117188,
+          590.1798095703125
+        ],
+        [
+          693.58251953125,
+          645.9864501953125
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t3",
+      "points": [
+        [
+          755.006103515625,
+          587.3309936523438
+        ],
+        [
+          810.8085327148438,
+          645.6292724609375
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "b7",
+      "points": [
+        [
+          301.5496826171875,
+          589.72802734375
+        ],
+        [
+          369.18206787109375,
+          651.6551513671875
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "b5",
+      "points": [
+        [
+          229.0374755859375,
+          589.6156616210938
+        ],
+        [
+          299.0829772949219,
+          654.166259765625
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "w8",
+      "points": [
+        [
+          695.177490234375,
+          589.9066162109375
+        ],
+        [
+          753.5087280273438,
+          645.724609375
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "b1",
+      "points": [
+        [
+          78.40675354003906,
+          589.501708984375
+        ],
+        [
+          155.44778442382812,
+          658.0628051757812
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t1",
+      "points": [
+        [
+          813.0631713867188,
+          590.5673828125
+        ],
+        [
+          872.732421875,
+          645.1663818359375
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "w4",
+      "points": [
+        [
+          571.7061767578125,
+          589.8389892578125
+        ],
+        [
+          631.3900756835938,
+          647.5343017578125
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    }
+  ],
+  "imagePath": "bili_2012293856__BV1X8EK6QEiW_BV1X8EK6QEiW_f30064__f000237.jpg",
+  "imageData": null,
+  "imageHeight": 720,
+  "imageWidth": 1280
+}
