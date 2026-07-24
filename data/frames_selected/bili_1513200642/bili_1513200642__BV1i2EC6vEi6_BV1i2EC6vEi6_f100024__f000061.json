@@ -1,0 +1,112 @@
+{
+  "version": "2.4.0",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "t5",
+      "points": [
+        [
+          837.3517456054688,
+          530.3997802734375
+        ],
+        [
+          925.9328002929688,
+          626.1583862304688
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "w4",
+      "points": [
+        [
+          479.39434814453125,
+          535.6865234375
+        ],
+        [
+          566.2234497070312,
+          626.3970947265625
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "b3",
+      "points": [
+        [
+          926.9020385742188,
+          536.6478881835938
+        ],
+        [
+          1018.7291870117188,
+          626.6168212890625
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "w8",
+      "points": [
+        [
+          389.728515625,
+          538.829833984375
+        ],
+        [
+          478.34881591796875,
+          627.980224609375
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t1",
+      "points": [
+        [
+          299.0382385253906,
+          537.846435546875
+        ],
+        [
+          386.01708984375,
+          628.698486328125
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t4",
+      "points": [
+        [
+          748.5052490234375,
+          531.0094604492188
+        ],
+        [
+          833.0208740234375,
+          627.8690795898438
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    }
+  ],
+  "imagePath": "bili_1513200642__BV1i2EC6vEi6_BV1i2EC6vEi6_f100024__f000061.jpg",
+  "imageData": null,
+  "imageHeight": 720,
+  "imageWidth": 1280
+}
