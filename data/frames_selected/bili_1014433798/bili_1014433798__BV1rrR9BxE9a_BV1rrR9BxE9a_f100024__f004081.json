@@ -1,0 +1,301 @@
+{
+  "version": "v4.0.0-beta.1",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "b5",
+      "score": null,
+      "points": [
+        [
+          324.21728515625,
+          576.1129150390625
+        ],
+        [
+          410.0535583496094,
+          576.1129150390625
+        ],
+        [
+          410.0535583496094,
+          659.2916259765625
+        ],
+        [
+          324.21728515625,
+          659.2916259765625
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "t3",
+      "score": null,
+      "points": [
+        [
+          669.6968994140625,
+          576.5689086914062
+        ],
+        [
+          752.11328125,
+          576.5689086914062
+        ],
+        [
+          752.11328125,
+          659.10546875
+        ],
+        [
+          669.6968994140625,
+          659.10546875
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "b6",
+      "score": null,
+      "points": [
+        [
+          150.6739959716797,
+          572.718505859375
+        ],
+        [
+          235.5771942138672,
+          572.718505859375
+        ],
+        [
+          235.5771942138672,
+          657.9114990234375
+        ],
+        [
+          150.6739959716797,
+          657.9114990234375
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "b4",
+      "score": null,
+      "points": [
+        [
+          235.4456787109375,
+          575.6118774414062
+        ],
+        [
+          324.2704772949219,
+          575.6118774414062
+        ],
+        [
+          324.2704772949219,
+          659.2217407226562
+        ],
+        [
+          235.4456787109375,
+          659.2217407226562
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "w4",
+      "score": null,
+      "points": [
+        [
+          1010.3742065429688,
+          577.3756103515625
+        ],
+        [
+          1097.0595703125,
+          577.3756103515625
+        ],
+        [
+          1097.0595703125,
+          660.114990234375
+        ],
+        [
+          1010.3742065429688,
+          660.114990234375
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "t8",
+      "score": null,
+      "points": [
+        [
+          757.0250854492188,
+          577.9684448242188
+        ],
+        [
+          837.810546875,
+          577.9684448242188
+        ],
+        [
+          837.810546875,
+          659.1795654296875
+        ],
+        [
+          757.0250854492188,
+          659.1795654296875
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "w3",
+      "score": null,
+      "points": [
+        [
+          1091.4654541015625,
+          572.7142944335938
+        ],
+        [
+          1180.27685546875,
+          572.7142944335938
+        ],
+        [
+          1180.27685546875,
+          660.4932861328125
+        ],
+        [
+          1091.4654541015625,
+          660.4932861328125
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "t9",
+      "score": null,
+      "points": [
+        [
+          842.6984252929688,
+          577.0722045898438
+        ],
+        [
+          924.18212890625,
+          577.0722045898438
+        ],
+        [
+          924.18212890625,
+          661.9415893554688
+        ],
+        [
+          842.6984252929688,
+          661.9415893554688
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "t1",
+      "score": null,
+      "points": [
+        [
+          927.430419921875,
+          577.3499145507812
+        ],
+        [
+          1011.360107421875,
+          577.3499145507812
+        ],
+        [
+          1011.360107421875,
+          659.06591796875
+        ],
+        [
+          927.430419921875,
+          659.06591796875
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "w6",
+      "score": null,
+      "points": [
+        [
+          737.9310344827586,
+          241.03448275862073
+        ],
+        [
+          793.4169278996866,
+          241.03448275862073
+        ],
+        [
+          793.4169278996866,
+          269.87460815047024
+        ],
+        [
+          737.9310344827586,
+          269.87460815047024
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "bili_1014433798__BV1rrR9BxE9a_BV1rrR9BxE9a_f100024__f004081.jpg",
+  "imageData": null,
+  "imageHeight": 720,
+  "imageWidth": 1280,
+  "description": ""
+}
