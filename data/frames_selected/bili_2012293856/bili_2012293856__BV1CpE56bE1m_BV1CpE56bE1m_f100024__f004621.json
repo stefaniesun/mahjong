@@ -1,0 +1,214 @@
+{
+  "version": "2.4.0",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "t1",
+      "points": [
+        [
+          148.57745361328125,
+          603.5181884765625
+        ],
+        [
+          217.0850830078125,
+          665.1134643554688
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t5",
+      "points": [
+        [
+          432.841796875,
+          600.2648315429688
+        ],
+        [
+          497.32098388671875,
+          657.2555541992188
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "b1",
+      "points": [
+        [
+          498.1155700683594,
+          600.3807983398438
+        ],
+        [
+          563.70947265625,
+          655.7957763671875
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t1",
+      "points": [
+        [
+          221.89915466308594,
+          602.9105834960938
+        ],
+        [
+          289.3651123046875,
+          663.1700439453125
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "b4",
+      "points": [
+        [
+          628.0458984375,
+          598.4325561523438
+        ],
+        [
+          691.6790771484375,
+          656.99267578125
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t4",
+      "points": [
+        [
+          364.72821044921875,
+          599.9907836914062
+        ],
+        [
+          428.92791748046875,
+          657.6278076171875
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t1",
+      "points": [
+        [
+          74.21127319335938,
+          602.2869873046875
+        ],
+        [
+          143.90528869628906,
+          666.77392578125
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "w6",
+      "points": [
+        [
+          753.26025390625,
+          599.1636962890625
+        ],
+        [
+          815.18603515625,
+          655.288330078125
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "b6",
+      "points": [
+        [
+          691.0304565429688,
+          598.4599609375
+        ],
+        [
+          752.8348388671875,
+          655.4362182617188
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "w9",
+      "points": [
+        [
+          877.3666381835938,
+          598.7562255859375
+        ],
+        [
+          940.720458984375,
+          654.5511474609375
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "b4",
+      "points": [
+        [
+          564.4804077148438,
+          598.74267578125
+        ],
+        [
+          628.751708984375,
+          657.5548706054688
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t2",
+      "points": [
+        [
+          295.3122253417969,
+          601.882568359375
+        ],
+        [
+          359.84716796875,
+          659.3314819335938
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    }
+  ],
+  "imagePath": "bili_2012293856__BV1CpE56bE1m_BV1CpE56bE1m_f100024__f004621.jpg",
+  "imageData": null,
+  "imageHeight": 720,
+  "imageWidth": 1280
+}
