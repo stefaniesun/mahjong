@@ -1,0 +1,214 @@
+{
+  "version": "2.4.0",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "t7",
+      "points": [
+        [
+          694.2055053710938,
+          437.6443786621094
+        ],
+        [
+          772.8214111328125,
+          537.3934326171875
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t5",
+      "points": [
+        [
+          774.92822265625,
+          438.35174560546875
+        ],
+        [
+          854.4767456054688,
+          537.431640625
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t6",
+      "points": [
+        [
+          613.4798583984375,
+          436.9188232421875
+        ],
+        [
+          691.6121826171875,
+          537.302734375
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t8",
+      "points": [
+        [
+          449.1696472167969,
+          438.19183349609375
+        ],
+        [
+          527.8442993164062,
+          537.3192749023438
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t9",
+      "points": [
+        [
+          364.08319091796875,
+          437.63763427734375
+        ],
+        [
+          445.3333435058594,
+          537.7728881835938
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "b6",
+      "points": [
+        [
+          935.7298583984375,
+          438.1236572265625
+        ],
+        [
+          1016.2243041992188,
+          537.7325439453125
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t7",
+      "points": [
+        [
+          279.2607421875,
+          437.6838073730469
+        ],
+        [
+          361.5634460449219,
+          539.157470703125
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t5",
+      "points": [
+        [
+          192.63278198242188,
+          437.80853271484375
+        ],
+        [
+          277.5328369140625,
+          540.4027099609375
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "b7",
+      "points": [
+        [
+          104.75804138183594,
+          436.84149169921875
+        ],
+        [
+          188.69309997558594,
+          488.3601989746094
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "w6",
+      "points": [
+        [
+          854.3072509765625,
+          439.366455078125
+        ],
+        [
+          935.0582275390625,
+          537.8189697265625
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "w5",
+      "points": [
+        [
+          1016.3380737304688,
+          436.19720458984375
+        ],
+        [
+          1086.3280029296875,
+          529.8893432617188
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "b3",
+      "points": [
+        [
+          532.1507568359375,
+          438.210693359375
+        ],
+        [
+          610.0960693359375,
+          535.9215698242188
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    }
+  ],
+  "imagePath": "bili_1598547959__BV1ug4y1n7wF_BV1ug4y1n7wF_f30064__f003901.jpg",
+  "imageData": null,
+  "imageHeight": 720,
+  "imageWidth": 1280
+}
