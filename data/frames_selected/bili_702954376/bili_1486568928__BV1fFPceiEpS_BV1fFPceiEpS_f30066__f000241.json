@@ -1,0 +1,129 @@
+{
+  "version": "2.4.0",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "unknown",
+      "points": [
+        [
+          841.0300903320312,
+          585.7077026367188
+        ],
+        [
+          913.4431762695312,
+          661.7448120117188
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "unknown",
+      "points": [
+        [
+          548.552490234375,
+          580.9191284179688
+        ],
+        [
+          618.865966796875,
+          656.560546875
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "unknown",
+      "points": [
+        [
+          398.76953125,
+          580.7976684570312
+        ],
+        [
+          471.7459411621094,
+          655.8400268554688
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "unknown",
+      "points": [
+        [
+          768.06884765625,
+          585.28662109375
+        ],
+        [
+          838.8318481445312,
+          660.5320434570312
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "unknown",
+      "points": [
+        [
+          475.2662353515625,
+          579.5255737304688
+        ],
+        [
+          545.6889038085938,
+          655.6027221679688
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "unknown",
+      "points": [
+        [
+          622.9415893554688,
+          582.2504272460938
+        ],
+        [
+          690.9462890625,
+          654.781982421875
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "unknown",
+      "points": [
+        [
+          697.176513671875,
+          584.2814331054688
+        ],
+        [
+          764.1381225585938,
+          655.60205078125
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    }
+  ],
+  "imagePath": "bili_1486568928__BV1fFPceiEpS_BV1fFPceiEpS_f30066__f000241.jpg",
+  "imageData": null,
+  "imageHeight": 720,
+  "imageWidth": 1280
+}

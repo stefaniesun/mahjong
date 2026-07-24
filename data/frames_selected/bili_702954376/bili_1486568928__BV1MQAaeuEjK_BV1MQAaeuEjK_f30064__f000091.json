@@ -1,0 +1,301 @@
+{
+  "version": "v4.0.0-beta.1",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "t1",
+      "score": null,
+      "points": [
+        [
+          224.7523651123047,
+          451.6770935058594
+        ],
+        [
+          293.4747619628906,
+          451.6770935058594
+        ],
+        [
+          293.4747619628906,
+          538.8030395507812
+        ],
+        [
+          224.7523651123047,
+          538.8030395507812
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "w6",
+      "score": null,
+      "points": [
+        [
+          533.4723510742188,
+          459.5408630371094
+        ],
+        [
+          601.8248901367188,
+          459.5408630371094
+        ],
+        [
+          601.8248901367188,
+          545.8796997070312
+        ],
+        [
+          533.4723510742188,
+          545.8796997070312
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "t3",
+      "score": null,
+      "points": [
+        [
+          878.6256713867188,
+          466.13818359375
+        ],
+        [
+          948.673828125,
+          466.13818359375
+        ],
+        [
+          948.673828125,
+          553.12939453125
+        ],
+        [
+          878.6256713867188,
+          553.12939453125
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "t7",
+      "score": null,
+      "points": [
+        [
+          810.2734375,
+          466.0150451660156
+        ],
+        [
+          878.5462036132812,
+          466.0150451660156
+        ],
+        [
+          878.5462036132812,
+          551.079345703125
+        ],
+        [
+          810.2734375,
+          551.079345703125
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "t3",
+      "score": null,
+      "points": [
+        [
+          603.0056762695312,
+          462.0108947753906
+        ],
+        [
+          670.3595581054688,
+          462.0108947753906
+        ],
+        [
+          670.3595581054688,
+          548.90771484375
+        ],
+        [
+          603.0056762695312,
+          548.90771484375
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "w1",
+      "score": null,
+      "points": [
+        [
+          741.3899536132812,
+          465.4856872558594
+        ],
+        [
+          809.25390625,
+          465.4856872558594
+        ],
+        [
+          809.25390625,
+          549.0798950195312
+        ],
+        [
+          741.3899536132812,
+          549.0798950195312
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "w8",
+      "score": null,
+      "points": [
+        [
+          298.8924560546875,
+          453.7076110839844
+        ],
+        [
+          370.33447265625,
+          453.7076110839844
+        ],
+        [
+          370.33447265625,
+          542.1006469726562
+        ],
+        [
+          298.8924560546875,
+          542.1006469726562
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "w9",
+      "score": null,
+      "points": [
+        [
+          390.4271346921843,
+          457.9239807128906
+        ],
+        [
+          459.2640487546843,
+          457.9239807128906
+        ],
+        [
+          459.2640487546843,
+          546.9484252929688
+        ],
+        [
+          390.4271346921843,
+          546.9484252929688
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "t3",
+      "score": null,
+      "points": [
+        [
+          671.8839721679688,
+          463.728515625
+        ],
+        [
+          739.8206176757812,
+          463.728515625
+        ],
+        [
+          739.8206176757812,
+          549.8291015625
+        ],
+        [
+          671.8839721679688,
+          549.8291015625
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    },
+    {
+      "label": "t2",
+      "score": null,
+      "points": [
+        [
+          464.2835693359375,
+          457.626953125
+        ],
+        [
+          529.9722290039062,
+          457.626953125
+        ],
+        [
+          529.9722290039062,
+          543.0911254882812
+        ],
+        [
+          464.2835693359375,
+          543.0911254882812
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "difficult": false,
+      "shape_type": "rectangle",
+      "flags": {},
+      "attributes": {},
+      "kie_linking": []
+    }
+  ],
+  "imagePath": "bili_1486568928__BV1MQAaeuEjK_BV1MQAaeuEjK_f30064__f000091.jpg",
+  "imageData": null,
+  "imageHeight": 720,
+  "imageWidth": 1280,
+  "description": ""
+}

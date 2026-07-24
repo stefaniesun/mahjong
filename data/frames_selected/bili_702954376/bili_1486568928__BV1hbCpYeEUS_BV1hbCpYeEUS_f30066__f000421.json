@@ -1,0 +1,214 @@
+{
+  "version": "2.4.0",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "unknown",
+      "points": [
+        [
+          291.101806640625,
+          472.4405212402344
+        ],
+        [
+          379.2161560058594,
+          589.623779296875
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "unknown",
+      "points": [
+        [
+          741.344970703125,
+          470.37109375
+        ],
+        [
+          832.4854125976562,
+          583.2522583007812
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "unknown",
+      "points": [
+        [
+          565.252685546875,
+          465.9241638183594
+        ],
+        [
+          653.728759765625,
+          583.12890625
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "unknown",
+      "points": [
+        [
+          475.540283203125,
+          468.9820861816406
+        ],
+        [
+          562.1503295898438,
+          585.6201171875
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "unknown",
+      "points": [
+        [
+          196.91851806640625,
+          472.05029296875
+        ],
+        [
+          288.1249694824219,
+          591.91259765625
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "unknown",
+      "points": [
+        [
+          382.8027648925781,
+          471.8352966308594
+        ],
+        [
+          471.5153503417969,
+          589.8728637695312
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "unknown",
+      "points": [
+        [
+          1197.41357421875,
+          520.7470703125
+        ],
+        [
+          1279.8231201171875,
+          600.1985473632812
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "unknown",
+      "points": [
+        [
+          1104.1693115234375,
+          529.1171875
+        ],
+        [
+          1193.6539306640625,
+          592.1103515625
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "unknown",
+      "points": [
+        [
+          545.6004028320312,
+          323.537353515625
+        ],
+        [
+          615.951171875,
+          357.1353454589844
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "unknown",
+      "points": [
+        [
+          1011.6144409179688,
+          537.9506225585938
+        ],
+        [
+          1102.6195068359375,
+          590.7294311523438
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "unknown",
+      "points": [
+        [
+          885.30322265625,
+          571.74462890625
+        ],
+        [
+          980.62060546875,
+          654.3479614257812
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "unknown",
+      "points": [
+        [
+          467.6112365722656,
+          343.6810607910156
+        ],
+        [
+          534.2802734375,
+          366.317138671875
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    }
+  ],
+  "imagePath": "bili_1486568928__BV1hbCpYeEUS_BV1hbCpYeEUS_f30066__f000421.jpg",
+  "imageData": null,
+  "imageHeight": 720,
+  "imageWidth": 1280
+}
