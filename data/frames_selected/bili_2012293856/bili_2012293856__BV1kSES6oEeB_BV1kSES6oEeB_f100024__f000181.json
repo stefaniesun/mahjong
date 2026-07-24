@@ -1,0 +1,78 @@
+{
+  "version": "2.4.0",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "t7",
+      "points": [
+        [
+          540.4443359375,
+          597.584716796875
+        ],
+        [
+          601.377685546875,
+          658.859619140625
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t6",
+      "points": [
+        [
+          603.10205078125,
+          597.3033447265625
+        ],
+        [
+          666.1461791992188,
+          656.5466918945312
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t4",
+      "points": [
+        [
+          667.0941162109375,
+          597.7738037109375
+        ],
+        [
+          727.5325927734375,
+          655.0166015625
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "w8",
+      "points": [
+        [
+          728.4100341796875,
+          600.0252685546875
+        ],
+        [
+          791.14990234375,
+          655.3753662109375
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    }
+  ],
+  "imagePath": "bili_2012293856__BV1kSES6oEeB_BV1kSES6oEeB_f100024__f000181.jpg",
+  "imageData": null,
+  "imageHeight": 720,
+  "imageWidth": 1280
+}
