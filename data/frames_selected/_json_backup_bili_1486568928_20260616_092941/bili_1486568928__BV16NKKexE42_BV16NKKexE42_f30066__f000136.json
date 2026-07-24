@@ -1,0 +1,61 @@
+{
+  "version": "2.4.0",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "w4",
+      "points": [
+        [
+          778.63623046875,
+          290.6552429199219
+        ],
+        [
+          838.72998046875,
+          371.6907043457031
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "w2",
+      "points": [
+        [
+          835.7109375,
+          290.1031188964844
+        ],
+        [
+          898.30078125,
+          370.925048828125
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "w7",
+      "points": [
+        [
+          715.2954711914062,
+          290.8333435058594
+        ],
+        [
+          779.781005859375,
+          376.4017028808594
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    }
+  ],
+  "imagePath": "bili_1486568928__BV16NKKexE42_BV16NKKexE42_f30066__f000136.jpg",
+  "imageData": null,
+  "imageHeight": 720,
+  "imageWidth": 1280
+}

@@ -1,0 +1,112 @@
+{
+  "version": "2.4.0",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "t4",
+      "points": [
+        [
+          666.7034301757812,
+          495.3297424316406
+        ],
+        [
+          737.3952026367188,
+          581.1271362304688
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t6",
+      "points": [
+        [
+          733.0407104492188,
+          500.489013671875
+        ],
+        [
+          802.279296875,
+          584.367919921875
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t4",
+      "points": [
+        [
+          799.2293090820312,
+          501.4150390625
+        ],
+        [
+          864.3396606445312,
+          582.1585083007812
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t9",
+      "points": [
+        [
+          926.0175170898438,
+          504.193115234375
+        ],
+        [
+          998.0776977539062,
+          584.1757202148438
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t4",
+      "points": [
+        [
+          861.307373046875,
+          502.5296325683594
+        ],
+        [
+          930.9400024414062,
+          583.2184448242188
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t3",
+      "points": [
+        [
+          799.43701171875,
+          501.2265625
+        ],
+        [
+          863.84912109375,
+          582.4225463867188
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    }
+  ],
+  "imagePath": "bili_1486568928__BV1fFPceiEpS_BV1fFPceiEpS_f30066__f000181.jpg",
+  "imageData": null,
+  "imageHeight": 720,
+  "imageWidth": 1280
+}

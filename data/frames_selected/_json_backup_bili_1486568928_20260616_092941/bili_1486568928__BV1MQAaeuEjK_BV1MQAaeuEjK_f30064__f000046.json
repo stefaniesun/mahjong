@@ -1,0 +1,214 @@
+{
+  "version": "2.4.0",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "w9",
+      "points": [
+        [
+          442.8191833496094,
+          457.92431640625
+        ],
+        [
+          512.469482421875,
+          543.6669921875
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "b1",
+      "points": [
+        [
+          371.0125427246094,
+          458.8255920410156
+        ],
+        [
+          440.1531677246094,
+          540.223876953125
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "b9",
+      "points": [
+        [
+          512.1670532226562,
+          459.5413513183594
+        ],
+        [
+          582.468505859375,
+          545.5055541992188
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t3",
+      "points": [
+        [
+          792.95556640625,
+          466.9923400878906
+        ],
+        [
+          861.5896606445312,
+          552.8084106445312
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t2",
+      "points": [
+        [
+          653.2228393554688,
+          463.039306640625
+        ],
+        [
+          719.6882934570312,
+          547.946044921875
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "w6",
+      "points": [
+        [
+          722.968505859375,
+          464.3564453125
+        ],
+        [
+          792.0214233398438,
+          550.0953979492188
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t1",
+      "points": [
+        [
+          227.6157684326172,
+          450.6295471191406
+        ],
+        [
+          293.8811340332031,
+          536.236328125
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t3",
+      "points": [
+        [
+          860.187255859375,
+          468.4168395996094
+        ],
+        [
+          930.368408203125,
+          555.51904296875
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "w8",
+      "points": [
+        [
+          299.6825866699219,
+          453.4757385253906
+        ],
+        [
+          368.4348449707031,
+          539.1173706054688
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "b6",
+      "points": [
+        [
+          582.3257446289062,
+          460.4658203125
+        ],
+        [
+          651.883056640625,
+          546.6159057617188
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "w2",
+      "points": [
+        [
+          929.3701171875,
+          468.9661560058594
+        ],
+        [
+          1002.8660278320312,
+          556.8977661132812
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "w1",
+      "points": [
+        [
+          929.9602661132812,
+          468.5559997558594
+        ],
+        [
+          999.4620971679688,
+          556.537109375
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    }
+  ],
+  "imagePath": "bili_1486568928__BV1MQAaeuEjK_BV1MQAaeuEjK_f30064__f000046.jpg",
+  "imageData": null,
+  "imageHeight": 720,
+  "imageWidth": 1280
+}
