@@ -117,7 +117,7 @@ class FakeResult:
 class FakeModel:
     names = {0: "1C", 2: "back", 5: "dragon_red"}
 
-    def predict(self, source, conf, verbose):
+    def predict(self, source, conf, iou, max_det, verbose):
         return [FakeResult()]
 
 

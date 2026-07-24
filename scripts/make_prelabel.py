@@ -41,6 +41,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="27-class prelabeler to project-label mapping YAML.",
     )
     parser.add_argument("--conf", type=float, default=0.25, help="Confidence threshold for inference.")
+    parser.add_argument("--iou", type=float, default=0.45, help="IoU threshold used by model NMS.")
+    parser.add_argument(
+        "--dedup-iou",
+        type=float,
+        default=0.35,
+        help="Drop lower-confidence boxes that overlap an already kept box by at least this IoU.",
+    )
+    parser.add_argument(
+        "--max-det",
+        type=int,
+        default=80,
+        help="Maximum detections per image before post-filtering.",
+    )
     return parser
 
 
@@ -109,6 +122,37 @@ def build_shape(label: str, bbox: Sequence[float]) -> dict[str, Any]:
     }
 
 
+def bbox_iou(box_a: Sequence[float], box_b: Sequence[float]) -> float:
+    ax1, ay1, ax2, ay2 = [float(value) for value in box_a]
+    bx1, by1, bx2, by2 = [float(value) for value in box_b]
+    inter_x1 = max(ax1, bx1)
+    inter_y1 = max(ay1, by1)
+    inter_x2 = min(ax2, bx2)
+    inter_y2 = min(ay2, by2)
+    inter_w = max(0.0, inter_x2 - inter_x1)
+    inter_h = max(0.0, inter_y2 - inter_y1)
+    inter_area = inter_w * inter_h
+    area_a = max(0.0, ax2 - ax1) * max(0.0, ay2 - ay1)
+    area_b = max(0.0, bx2 - bx1) * max(0.0, by2 - by1)
+    union = area_a + area_b - inter_area
+    return inter_area / union if union > 0 else 0.0
+
+
+def filter_overlapping_boxes(
+    boxes: Sequence[Sequence[float]],
+    classes: Sequence[float],
+    confidences: Sequence[float],
+    iou_threshold: float,
+) -> list[tuple[Sequence[float], float]]:
+    detections = sorted(zip(boxes, classes, confidences), key=lambda item: float(item[2]), reverse=True)
+    kept: list[tuple[Sequence[float], float]] = []
+    for bbox, cls_idx, _confidence in detections:
+        if any(bbox_iou(bbox, kept_bbox) >= iou_threshold for kept_bbox, _kept_cls in kept):
+            continue
+        kept.append((bbox, cls_idx))
+    return kept
+
+
 def write_label_file(image_path: Path, width: int, height: int, shapes: Sequence[dict[str, Any]]) -> None:
     payload = {
         "version": "2.4.0",
@@ -129,24 +173,28 @@ def generate_prelabels(
     valid_labels: set[str],
     conf: float,
     prelabel_map: dict[str, str] | None = None,
+    iou: float = 0.45,
+    dedup_iou: float = 0.35,
+    max_det: int = 80,
 ) -> None:
     for image_path in image_paths:
-        results = model.predict(source=str(image_path), conf=conf, verbose=False)
+        results = model.predict(source=str(image_path), conf=conf, iou=iou, max_det=max_det, verbose=False)
         result = results[0]
         height, width = [int(value) for value in result.orig_shape]
         names = getattr(model, "names", {})
         boxes = result.boxes
         xyxy_items = boxes.xyxy.cpu().tolist() if boxes is not None else []
         cls_items = boxes.cls.cpu().tolist() if boxes is not None else []
+        conf_items = boxes.conf.cpu().tolist() if boxes is not None else []
+        filtered_items = filter_overlapping_boxes(xyxy_items, cls_items, conf_items, dedup_iou)
 
         shapes = []
-        for bbox, cls_idx in zip(xyxy_items, cls_items):
+        for bbox, cls_idx in filtered_items:
             raw_label = str(names[int(cls_idx)])
             label = map_label(raw_label, valid_labels, prelabel_map)
             shapes.append(build_shape(label, bbox))
 
         write_label_file(image_path, width, height, shapes)
-
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -186,7 +234,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     valid_labels.add("unknown")
     prelabel_map = load_prelabel_map(prelabel_map_path)
     model = load_model(model_path)
-    generate_prelabels(model, image_paths, valid_labels, args.conf, prelabel_map)
+    generate_prelabels(model, image_paths, valid_labels, args.conf, prelabel_map, args.iou, args.dedup_iou, args.max_det)
+
     print(f"Wrote {len(image_paths)} X-AnyLabeling prelabel files to {input_root}")
     return 0
 
