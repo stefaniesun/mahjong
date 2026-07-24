@@ -1,0 +1,214 @@
+{
+  "version": "2.4.0",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "w2",
+      "points": [
+        [
+          490.9840087890625,
+          577.5506591796875
+        ],
+        [
+          568.5745849609375,
+          653.1364135742188
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "w1",
+      "points": [
+        [
+          571.5209350585938,
+          579.4929809570312
+        ],
+        [
+          649.13916015625,
+          653.9215087890625
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "b2",
+      "points": [
+        [
+          93.9658203125,
+          578.3480224609375
+        ],
+        [
+          175.03208923339844,
+          651.1066284179688
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "b9",
+      "points": [
+        [
+          249.37277221679688,
+          577.1776733398438
+        ],
+        [
+          333.37640380859375,
+          655.936279296875
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "w7",
+      "points": [
+        [
+          413.37255859375,
+          578.6105346679688
+        ],
+        [
+          488.8335876464844,
+          655.4700927734375
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "w9",
+      "points": [
+        [
+          650.8704833984375,
+          579.43408203125
+        ],
+        [
+          727.8844604492188,
+          655.7962646484375
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t6",
+      "points": [
+        [
+          967.8717651367188,
+          574.0921630859375
+        ],
+        [
+          1046.669677734375,
+          655.6209716796875
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "b1",
+      "points": [
+        [
+          166.99391174316406,
+          579.8978881835938
+        ],
+        [
+          251.7236328125,
+          652.071533203125
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t3",
+      "points": [
+        [
+          890.7010498046875,
+          578.6065673828125
+        ],
+        [
+          967.2111206054688,
+          654.557861328125
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t8",
+      "points": [
+        [
+          1048.075439453125,
+          572.874755859375
+        ],
+        [
+          1128.548095703125,
+          654.0899658203125
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t7",
+      "points": [
+        [
+          729.7199096679688,
+          579.8961791992188
+        ],
+        [
+          805.79443359375,
+          656.3610229492188
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    },
+    {
+      "label": "t5",
+      "points": [
+        [
+          809.890869140625,
+          578.1983642578125
+        ],
+        [
+          886.4893798828125,
+          654.8295288085938
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "rectangle",
+      "flags": {}
+    }
+  ],
+  "imagePath": "bili_1014433798__BV1855v6DEsq_BV1855v6DEsq_f100024__f000061.jpg",
+  "imageData": null,
+  "imageHeight": 720,
+  "imageWidth": 1280
+}
