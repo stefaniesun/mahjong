@@ -346,6 +346,7 @@ def cmd_build(args) -> int:
             result = detector.predict(source=frame, conf=args.det_conf, imgsz=args.imgsz, device=args.device, verbose=False)[0]
             boxes = getattr(result, "boxes", None)
             shapes: list[dict[str, Any]] = []
+            topk: list[list[list[Any]]] = []
             if boxes is not None and len(boxes):
                 xyxy = boxes.xyxy.cpu().numpy()
                 patches = []
@@ -363,9 +364,12 @@ def cmd_build(args) -> int:
                         "shape_type": "rectangle",
                         "flags": {},
                     }
-                    if args.top_k > 1:
-                        shape["description"] = " ".join(f"{c}:{p:.2f}" for c, p in cands)
                     shapes.append(shape)
+                    if args.top_k > 1:
+                        # Alternatives go to a sidecar, never into the shape: X-AnyLabeling
+                        # renders `description` on the canvas, and 65 strings per frame
+                        # buries the tiles you are trying to look at.
+                        topk.append([[c, round(p, 3)] for c, p in cands])
 
             stem = f"{clip_name}__f{idx - start_frame:06d}"
             cv2.imwrite(str(ann_dir / f"{stem}.jpg"), frame)
@@ -385,6 +389,8 @@ def cmd_build(args) -> int:
                 ),
                 encoding="utf-8",
             )
+            if topk:
+                (ann_dir / f"{stem}.topk.json").write_text(json.dumps(topk, ensure_ascii=False), encoding="utf-8")
             checkpoints.append({"file": f"{stem}.jpg", "clip_frame": idx - start_frame, "clip_time": round((idx - start_frame) / fps, 2), "source_frame": idx, "prelabel_boxes": len(shapes)})
             checkpoint_total += 1
         writer.release()

@@ -16,8 +16,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "b7:0.95 w1:0.00 t7:0.00"
+      "flags": {}
     },
     {
       "label": "t5",
@@ -33,8 +32,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "t5:0.96 b4:0.00 t1:0.00"
+      "flags": {}
     },
     {
       "label": "t5",
@@ -50,8 +48,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "t5:0.97 t3:0.00 b8:0.00"
+      "flags": {}
     },
     {
       "label": "t5",
@@ -67,8 +64,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "t5:0.97 b4:0.00 t1:0.00"
+      "flags": {}
     },
     {
       "label": "t7",
@@ -84,8 +80,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "t7:0.95 w2:0.00 t1:0.00"
+      "flags": {}
     },
     {
       "label": "b2",
@@ -101,8 +96,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "b2:0.94 w9:0.00 b3:0.00"
+      "flags": {}
     },
     {
       "label": "b2",
@@ -118,8 +112,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "b2:0.94 w9:0.00 b6:0.00"
+      "flags": {}
     },
     {
       "label": "b1",
@@ -135,8 +128,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "b1:0.96 b7:0.00 w6:0.00"
+      "flags": {}
     },
     {
       "label": "b1",
@@ -152,8 +144,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "b1:0.96 b7:0.00 w6:0.00"
+      "flags": {}
     },
     {
       "label": "t1",
@@ -169,8 +160,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "t1:0.95 w9:0.00 w6:0.00"
+      "flags": {}
     },
     {
       "label": "t2",
@@ -186,8 +176,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "t2:0.96 b5:0.00 w9:0.00"
+      "flags": {}
     },
     {
       "label": "t1",
@@ -203,8 +192,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "t1:0.95 w7:0.00 w9:0.00"
+      "flags": {}
     },
     {
       "label": "w7",
@@ -220,8 +208,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "w7:0.97 w3:0.00 w6:0.00"
+      "flags": {}
     },
     {
       "label": "b3",
@@ -237,8 +224,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "b3:0.95 b2:0.00 w6:0.00"
+      "flags": {}
     },
     {
       "label": "b8",
@@ -254,8 +240,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "b8:0.93 b9:0.00 b2:0.00"
+      "flags": {}
     },
     {
       "label": "w8",
@@ -271,8 +256,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "w8:0.96 w3:0.01 w6:0.00"
+      "flags": {}
     },
     {
       "label": "w4",
@@ -288,8 +272,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "w4:0.94 w9:0.00 w5:0.00"
+      "flags": {}
     },
     {
       "label": "b4",
@@ -305,8 +288,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "b4:0.97 b9:0.00 b5:0.00"
+      "flags": {}
     },
     {
       "label": "b5",
@@ -322,8 +304,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "b5:0.94 t7:0.00 t1:0.00"
+      "flags": {}
     },
     {
       "label": "t7",
@@ -339,8 +320,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "t7:0.96 w5:0.00 b1:0.00"
+      "flags": {}
     },
     {
       "label": "b5",
@@ -356,8 +336,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "b5:0.96 w9:0.00 t5:0.00"
+      "flags": {}
     },
     {
       "label": "b6",
@@ -373,8 +352,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "b6:0.93 b9:0.01 b5:0.00"
+      "flags": {}
     },
     {
       "label": "b9",
@@ -390,8 +368,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "b9:0.95 b7:0.00 t9:0.00"
+      "flags": {}
     },
     {
       "label": "t8",
@@ -407,8 +384,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "t8:0.93 t6:0.00 t5:0.00"
+      "flags": {}
     },
     {
       "label": "w1",
@@ -424,8 +400,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "w1:0.97 w7:0.00 t7:0.00"
+      "flags": {}
     },
     {
       "label": "w8",
@@ -441,8 +416,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "w8:0.96 w3:0.01 w1:0.00"
+      "flags": {}
     },
     {
       "label": "b5",
@@ -458,8 +432,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "b5:0.96 b6:0.00 w9:0.00"
+      "flags": {}
     },
     {
       "label": "t3",
@@ -475,8 +448,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "t3:0.95 t4:0.00 b4:0.00"
+      "flags": {}
     },
     {
       "label": "w1",
@@ -492,8 +464,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "w1:0.96 t7:0.00 b6:0.00"
+      "flags": {}
     },
     {
       "label": "t4",
@@ -509,8 +480,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "t4:0.94 w7:0.00 t2:0.00"
+      "flags": {}
     },
     {
       "label": "t3",
@@ -526,8 +496,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "t3:0.96 t9:0.00 b6:0.00"
+      "flags": {}
     },
     {
       "label": "b4",
@@ -543,8 +512,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "b4:0.95 b5:0.00 b9:0.00"
+      "flags": {}
     },
     {
       "label": "t4",
@@ -560,8 +528,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "t4:0.93 b9:0.00 t5:0.00"
+      "flags": {}
     },
     {
       "label": "t8",
@@ -577,8 +544,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "t8:0.95 t6:0.00 t7:0.00"
+      "flags": {}
     },
     {
       "label": "t4",
@@ -594,8 +560,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "t4:0.94 t5:0.00 t2:0.00"
+      "flags": {}
     },
     {
       "label": "w1",
@@ -611,8 +576,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "w1:0.94 w2:0.00 w4:0.00"
+      "flags": {}
     },
     {
       "label": "b6",
@@ -628,8 +592,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "b6:0.93 b7:0.01 w1:0.01"
+      "flags": {}
     },
     {
       "label": "t2",
@@ -645,8 +608,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "t2:0.96 b2:0.00 t6:0.00"
+      "flags": {}
     },
     {
       "label": "w2",
@@ -662,8 +624,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "w2:0.27 b2:0.15 t3:0.10"
+      "flags": {}
     },
     {
       "label": "w1",
@@ -679,8 +640,7 @@
       ],
       "group_id": null,
       "shape_type": "rectangle",
-      "flags": {},
-      "description": "w1:0.86 b9:0.04 b8:0.01"
+      "flags": {}
     }
   ],
   "imagePath": "clip01_7507945925261200__f000294.jpg",
