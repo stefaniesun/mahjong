@@ -1,0 +1,193 @@
+{
+  "clips": [
+    {
+      "name": "clip01_7507945925261200",
+      "video": "..\\data\\raw_videos\\dy_MS4wLjABAAAAcAE9Q3dbsifdflS25BGXkkQlJmTPnQBzrG7hj8RUOulSpRfBtxNHS13Fhs4npFzf\\7507945925261200700_你敢信啊，换条出去做条清揍闷#川麻小小 #幺鸡麻将 #东望茶府.mp4",
+      "clip_file": "clips\\clip01_7507945925261200.mp4",
+      "start": 285.0,
+      "end": 315.0,
+      "fps": 29.570042820938564,
+      "checkpoints": [
+        {
+          "file": "clip01_7507945925261200__f000000.jpg",
+          "clip_frame": 0,
+          "clip_time": 0.0,
+          "source_frame": 8427,
+          "prelabel_boxes": 41
+        },
+        {
+          "file": "clip01_7507945925261200__f000147.jpg",
+          "clip_frame": 147,
+          "clip_time": 4.97,
+          "source_frame": 8574,
+          "prelabel_boxes": 49
+        },
+        {
+          "file": "clip01_7507945925261200__f000294.jpg",
+          "clip_frame": 294,
+          "clip_time": 9.94,
+          "source_frame": 8721,
+          "prelabel_boxes": 40
+        },
+        {
+          "file": "clip01_7507945925261200__f000441.jpg",
+          "clip_frame": 441,
+          "clip_time": 14.91,
+          "source_frame": 8868,
+          "prelabel_boxes": 52
+        },
+        {
+          "file": "clip01_7507945925261200__f000588.jpg",
+          "clip_frame": 588,
+          "clip_time": 19.88,
+          "source_frame": 9015,
+          "prelabel_boxes": 26
+        },
+        {
+          "file": "clip01_7507945925261200__f000735.jpg",
+          "clip_frame": 735,
+          "clip_time": 24.86,
+          "source_frame": 9162,
+          "prelabel_boxes": 63
+        },
+        {
+          "file": "clip01_7507945925261200__f000882.jpg",
+          "clip_frame": 882,
+          "clip_time": 29.83,
+          "source_frame": 9309,
+          "prelabel_boxes": 59
+        }
+      ],
+      "harvested_overlap": 0,
+      "scan_score": 2.795
+    },
+    {
+      "name": "clip02_7499348207492304",
+      "video": "..\\data\\raw_videos\\dy_MS4wLjABAAAAcAE9Q3dbsifdflS25BGXkkQlJmTPnQBzrG7hj8RUOulSpRfBtxNHS13Fhs4npFzf\\7499348207492304187_开业啦~到店领🧧#川麻小小 #幺鸡麻将 #东望茶府 @川麻浩宇（招募博主）.mp4",
+      "clip_file": "clips\\clip02_7499348207492304.mp4",
+      "start": 165.0,
+      "end": 195.0,
+      "fps": 29.712030142639275,
+      "checkpoints": [
+        {
+          "file": "clip02_7499348207492304__f000000.jpg",
+          "clip_frame": 0,
+          "clip_time": 0.0,
+          "source_frame": 4902,
+          "prelabel_boxes": 79
+        },
+        {
+          "file": "clip02_7499348207492304__f000148.jpg",
+          "clip_frame": 148,
+          "clip_time": 4.98,
+          "source_frame": 5050,
+          "prelabel_boxes": 81
+        },
+        {
+          "file": "clip02_7499348207492304__f000296.jpg",
+          "clip_frame": 296,
+          "clip_time": 9.96,
+          "source_frame": 5198,
+          "prelabel_boxes": 85
+        },
+        {
+          "file": "clip02_7499348207492304__f000444.jpg",
+          "clip_frame": 444,
+          "clip_time": 14.94,
+          "source_frame": 5346,
+          "prelabel_boxes": 82
+        },
+        {
+          "file": "clip02_7499348207492304__f000592.jpg",
+          "clip_frame": 592,
+          "clip_time": 19.92,
+          "source_frame": 5494,
+          "prelabel_boxes": 84
+        },
+        {
+          "file": "clip02_7499348207492304__f000740.jpg",
+          "clip_frame": 740,
+          "clip_time": 24.91,
+          "source_frame": 5642,
+          "prelabel_boxes": 87
+        },
+        {
+          "file": "clip02_7499348207492304__f000888.jpg",
+          "clip_frame": 888,
+          "clip_time": 29.89,
+          "source_frame": 5790,
+          "prelabel_boxes": 89
+        }
+      ],
+      "harvested_overlap": 0,
+      "scan_score": 2.792
+    },
+    {
+      "name": "clip03_7504292741762927",
+      "video": "..\\data\\raw_videos\\dy_MS4wLjABAAAAcAE9Q3dbsifdflS25BGXkkQlJmTPnQBzrG7hj8RUOulSpRfBtxNHS13Fhs4npFzf\\7504292741762927882_有没有治拖延症的办法🤥#川麻小小 #幺鸡麻将 #东望茶府 @川麻浩宇（招募博主） @旺仔 @豁孩🥱（奶爸养成版）.mp4",
+      "clip_file": "clips\\clip03_7504292741762927.mp4",
+      "start": 345.0,
+      "end": 375.0,
+      "fps": 29.743983614951357,
+      "checkpoints": [
+        {
+          "file": "clip03_7504292741762927__f000000.jpg",
+          "clip_frame": 0,
+          "clip_time": 0.0,
+          "source_frame": 10261,
+          "prelabel_boxes": 65
+        },
+        {
+          "file": "clip03_7504292741762927__f000148.jpg",
+          "clip_frame": 148,
+          "clip_time": 4.98,
+          "source_frame": 10409,
+          "prelabel_boxes": 64
+        },
+        {
+          "file": "clip03_7504292741762927__f000296.jpg",
+          "clip_frame": 296,
+          "clip_time": 9.95,
+          "source_frame": 10557,
+          "prelabel_boxes": 65
+        },
+        {
+          "file": "clip03_7504292741762927__f000444.jpg",
+          "clip_frame": 444,
+          "clip_time": 14.93,
+          "source_frame": 10705,
+          "prelabel_boxes": 67
+        },
+        {
+          "file": "clip03_7504292741762927__f000592.jpg",
+          "clip_frame": 592,
+          "clip_time": 19.9,
+          "source_frame": 10853,
+          "prelabel_boxes": 66
+        },
+        {
+          "file": "clip03_7504292741762927__f000740.jpg",
+          "clip_frame": 740,
+          "clip_time": 24.88,
+          "source_frame": 11001,
+          "prelabel_boxes": 56
+        },
+        {
+          "file": "clip03_7504292741762927__f000888.jpg",
+          "clip_frame": 888,
+          "clip_time": 29.85,
+          "source_frame": 11149,
+          "prelabel_boxes": 71
+        }
+      ],
+      "harvested_overlap": 0,
+      "scan_score": 2.754
+    }
+  ],
+  "checkpoint_seconds": 5.0,
+  "leakage": {
+    "note": "分类器见过部分本域帧，检查点分类准确率偏乐观；分类的权威数字见 test_set_v1 (99.51%)",
+    "clips_with_harvested_overlap": 0
+  },
+  "checkpoint_total": 21
+}

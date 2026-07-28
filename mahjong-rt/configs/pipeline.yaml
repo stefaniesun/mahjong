@@ -1,0 +1,38 @@
+# Phase 4 流水线参数。任务 9 的离线扫参就是在这些键上做网格搜索。
+
+tracker:
+  high_thresh: 0.5        # 高分检测直接参与一级关联
+  low_thresh: 0.1         # 低分检测只用于二级关联，救回糊帧
+  match_thresh: 0.7
+  match_thresh_low: 0.4
+  fallback_match_thresh: 0.3   # GMC 失败时放宽门限，宁可松也不要断轨
+  track_buffer: 30        # 丢失后保留帧数（转头回来还能接上）
+  min_hits: 2
+  smooth_alpha: 0.8       # 观测主导：牌是静止的，别让滤波器凭空造速度
+  gmc_enabled: true
+
+voter:
+  window: 7
+  min_conf: 0.5           # 低于此值视为弃权，不入窗
+  min_effective: 3
+  majority_ratio: 0.6
+  hysteresis: 4           # 连续 4 次才允许推翻已确认类别
+  full_weight_px: 40      # 短边 >= 此值的 crop 给满权重
+
+state:
+  occluded_after: 2
+  lost_after: 30
+  emit_frame_summary: true
+
+zones:
+  # 默认关闭：纯启发式分区错误率高（见 docs/zones_status.md）。
+  # 要启用需先有区域标注数据，届时改回 true。
+  enabled: false
+  hand_size_quantile: 0.72   # 尺寸高于此分位才可能是手牌（尺寸=深度，实测强单调）
+  hand_min_ny: 0.60          # 且必须在画面这个高度以下
+  hand_row_tol: 0.9          # 横向条带分组容差（单位：牌高）
+  run_gap_ratio: 0.8         # 同一串内允许的最大间隙（单位：牌宽）
+  min_run_len: 3             # 少于此长度不算“结构”
+  river_radius: 0.30         # 距桌心多远仍算“中间牌池”（单位：画面对角线）
+  wall_size_quantile: 0.22   # 最小的这批 + 靠上 = 牌墙
+  seat_span_deg: 80.0        # 每个座位扇区的角度宽度
