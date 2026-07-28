@@ -25,14 +25,12 @@ state:
   emit_frame_summary: true
 
 zones:
-  # 默认关闭：纯启发式分区错误率高（见 docs/zones_status.md）。
-  # 要启用需先有区域标注数据，届时改回 true。
-  enabled: false
-  hand_size_quantile: 0.72   # 尺寸高于此分位才可能是手牌（尺寸=深度，实测强单调）
-  hand_min_ny: 0.60          # 且必须在画面这个高度以下
-  hand_row_tol: 0.9          # 横向条带分组容差（单位：牌高）
-  run_gap_ratio: 0.8         # 同一串内允许的最大间隙（单位：牌宽）
-  min_run_len: 3             # 少于此长度不算“结构”
-  river_radius: 0.30         # 距桌心多远仍算“中间牌池”（单位：画面对角线）
-  wall_size_quantile: 0.22   # 最小的这批 + 靠上 = 牌墙
-  seat_span_deg: 80.0        # 每个座位扇区的角度宽度
+  # 阈值来自 899 个人工标注框的网格搜索，实测整体 92.5%
+  # 各区域召回: 手牌 97.0 / 牌池 95.3 / 下家 97.8 / 上家 73.5 / 对家 71.0
+  enabled: true
+  hand_size_ratio: 1.4        # 手牌: 尺寸 >= 帧内中位数的 1.4 倍
+  hand_min_ny: 0.60           #       且在画面下方 60% 以下
+  left_max_nx: 0.28           # 上家: 横向在牌池范围之外(左)
+  right_min_nx: 0.78          # 下家: 横向在牌池范围之外(右)
+  across_max_ny: 0.28         # 对家: 与牌池横向重叠，靠"更靠上 + 更小"区分
+  across_max_size_ratio: 0.9
