@@ -1,0 +1,11 @@
+# 扫参推荐值。不会自动写入 pipeline.yaml——确认后手动启用。
+det_conf: 0.05
+state.lost_after: 45
+tracker.match_thresh: 0.8
+tracker.match_thresh_low: 0.5
+tracker.track_buffer: 15
+voter.hysteresis: 4
+voter.majority_ratio: 0.5
+voter.min_conf: 0.6
+voter.min_effective: 2
+voter.window: 9

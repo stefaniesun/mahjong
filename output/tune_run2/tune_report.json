@@ -1,0 +1,281 @@
+{
+  "trials": 200,
+  "feasible": 178,
+  "flicker_max": 0.05,
+  "id_switch_max": 0.28,
+  "best_on_tune": {
+    "config": {
+      "det_conf": 0.05,
+      "voter.window": 9,
+      "voter.min_effective": 2,
+      "voter.majority_ratio": 0.5,
+      "voter.hysteresis": 4,
+      "voter.min_conf": 0.6,
+      "tracker.track_buffer": 15,
+      "tracker.match_thresh": 0.8,
+      "tracker.match_thresh_low": 0.5,
+      "state.lost_after": 45
+    },
+    "class_accuracy": 0.9882,
+    "recall": 0.9882,
+    "precision": 0.9882,
+    "flicker": 0.0144,
+    "id_switch_rate": 0.2055
+  },
+  "best_on_holdout": {
+    "class_accuracy": 0.9652,
+    "recall": 0.9726,
+    "precision": 0.9467,
+    "flicker": 0.0469,
+    "id_switch_rate": 0.4199
+  },
+  "baseline_on_holdout": {
+    "class_accuracy": 0.9428,
+    "recall": 0.9527,
+    "precision": 0.9575,
+    "flicker": 0.0912,
+    "id_switch_rate": 0.2543
+  },
+  "pareto": [
+    {
+      "config": {
+        "det_conf": 0.1,
+        "voter.window": 11,
+        "voter.min_effective": 2,
+        "voter.majority_ratio": 0.6,
+        "voter.hysteresis": 6,
+        "voter.min_conf": 0.4,
+        "tracker.track_buffer": 15,
+        "tracker.match_thresh": 0.8,
+        "tracker.match_thresh_low": 0.4,
+        "state.lost_after": 30
+      },
+      "class_accuracy": 0.9882,
+      "flicker": 0.0044
+    },
+    {
+      "config": {
+        "det_conf": 0.05,
+        "voter.window": 7,
+        "voter.min_effective": 2,
+        "voter.majority_ratio": 0.5,
+        "voter.hysteresis": 8,
+        "voter.min_conf": 0.6,
+        "tracker.track_buffer": 15,
+        "tracker.match_thresh": 0.8,
+        "tracker.match_thresh_low": 0.3,
+        "state.lost_after": 30
+      },
+      "class_accuracy": 0.9882,
+      "flicker": 0.0044
+    },
+    {
+      "config": {
+        "det_conf": 0.1,
+        "voter.window": 11,
+        "voter.min_effective": 2,
+        "voter.majority_ratio": 0.7,
+        "voter.hysteresis": 6,
+        "voter.min_conf": 0.6,
+        "tracker.track_buffer": 15,
+        "tracker.match_thresh": 0.8,
+        "tracker.match_thresh_low": 0.3,
+        "state.lost_after": 45
+      },
+      "class_accuracy": 0.9882,
+      "flicker": 0.0044
+    },
+    {
+      "config": {
+        "det_conf": 0.1,
+        "voter.window": 9,
+        "voter.min_effective": 2,
+        "voter.majority_ratio": 0.5,
+        "voter.hysteresis": 6,
+        "voter.min_conf": 0.6,
+        "tracker.track_buffer": 15,
+        "tracker.match_thresh": 0.8,
+        "tracker.match_thresh_low": 0.4,
+        "state.lost_after": 20
+      },
+      "class_accuracy": 0.9882,
+      "flicker": 0.0047
+    },
+    {
+      "config": {
+        "det_conf": 0.2,
+        "voter.window": 5,
+        "voter.min_effective": 2,
+        "voter.majority_ratio": 0.6,
+        "voter.hysteresis": 8,
+        "voter.min_conf": 0.5,
+        "tracker.track_buffer": 15,
+        "tracker.match_thresh": 0.8,
+        "tracker.match_thresh_low": 0.4,
+        "state.lost_after": 45
+      },
+      "class_accuracy": 0.9882,
+      "flicker": 0.0047
+    },
+    {
+      "config": {
+        "det_conf": 0.1,
+        "voter.window": 7,
+        "voter.min_effective": 4,
+        "voter.majority_ratio": 0.7,
+        "voter.hysteresis": 8,
+        "voter.min_conf": 0.4,
+        "tracker.track_buffer": 15,
+        "tracker.match_thresh": 0.8,
+        "tracker.match_thresh_low": 0.5,
+        "state.lost_after": 20
+      },
+      "class_accuracy": 0.9882,
+      "flicker": 0.0058
+    },
+    {
+      "config": {
+        "det_conf": 0.1,
+        "voter.window": 5,
+        "voter.min_effective": 2,
+        "voter.majority_ratio": 0.7,
+        "voter.hysteresis": 8,
+        "voter.min_conf": 0.5,
+        "tracker.track_buffer": 45,
+        "tracker.match_thresh": 0.8,
+        "tracker.match_thresh_low": 0.5,
+        "state.lost_after": 20
+      },
+      "class_accuracy": 0.9882,
+      "flicker": 0.01
+    },
+    {
+      "config": {
+        "det_conf": 0.05,
+        "voter.window": 11,
+        "voter.min_effective": 2,
+        "voter.majority_ratio": 0.7,
+        "voter.hysteresis": 6,
+        "voter.min_conf": 0.4,
+        "tracker.track_buffer": 15,
+        "tracker.match_thresh": 0.7,
+        "tracker.match_thresh_low": 0.3,
+        "state.lost_after": 30
+      },
+      "class_accuracy": 0.9882,
+      "flicker": 0.0104
+    },
+    {
+      "config": {
+        "det_conf": 0.1,
+        "voter.window": 11,
+        "voter.min_effective": 2,
+        "voter.majority_ratio": 0.5,
+        "voter.hysteresis": 6,
+        "voter.min_conf": 0.5,
+        "tracker.track_buffer": 15,
+        "tracker.match_thresh": 0.7,
+        "tracker.match_thresh_low": 0.3,
+        "state.lost_after": 45
+      },
+      "class_accuracy": 0.9882,
+      "flicker": 0.0105
+    },
+    {
+      "config": {
+        "det_conf": 0.1,
+        "voter.window": 11,
+        "voter.min_effective": 2,
+        "voter.majority_ratio": 0.6,
+        "voter.hysteresis": 8,
+        "voter.min_conf": 0.5,
+        "tracker.track_buffer": 15,
+        "tracker.match_thresh": 0.7,
+        "tracker.match_thresh_low": 0.4,
+        "state.lost_after": 45
+      },
+      "class_accuracy": 0.9882,
+      "flicker": 0.0112
+    },
+    {
+      "config": {
+        "det_conf": 0.05,
+        "voter.window": 7,
+        "voter.min_effective": 2,
+        "voter.majority_ratio": 0.7,
+        "voter.hysteresis": 8,
+        "voter.min_conf": 0.6,
+        "tracker.track_buffer": 15,
+        "tracker.match_thresh": 0.7,
+        "tracker.match_thresh_low": 0.5,
+        "state.lost_after": 45
+      },
+      "class_accuracy": 0.9882,
+      "flicker": 0.0118
+    },
+    {
+      "config": {
+        "det_conf": 0.2,
+        "voter.window": 5,
+        "voter.min_effective": 3,
+        "voter.majority_ratio": 0.6,
+        "voter.hysteresis": 6,
+        "voter.min_conf": 0.6,
+        "tracker.track_buffer": 30,
+        "tracker.match_thresh": 0.8,
+        "tracker.match_thresh_low": 0.4,
+        "state.lost_after": 20
+      },
+      "class_accuracy": 0.9882,
+      "flicker": 0.0118
+    },
+    {
+      "config": {
+        "det_conf": 0.1,
+        "voter.window": 11,
+        "voter.min_effective": 3,
+        "voter.majority_ratio": 0.7,
+        "voter.hysteresis": 3,
+        "voter.min_conf": 0.4,
+        "tracker.track_buffer": 15,
+        "tracker.match_thresh": 0.7,
+        "tracker.match_thresh_low": 0.3,
+        "state.lost_after": 20
+      },
+      "class_accuracy": 0.9882,
+      "flicker": 0.0121
+    },
+    {
+      "config": {
+        "det_conf": 0.2,
+        "voter.window": 11,
+        "voter.min_effective": 3,
+        "voter.majority_ratio": 0.7,
+        "voter.hysteresis": 4,
+        "voter.min_conf": 0.4,
+        "tracker.track_buffer": 45,
+        "tracker.match_thresh": 0.8,
+        "tracker.match_thresh_low": 0.5,
+        "state.lost_after": 20
+      },
+      "class_accuracy": 0.9882,
+      "flicker": 0.0122
+    },
+    {
+      "config": {
+        "det_conf": 0.2,
+        "voter.window": 11,
+        "voter.min_effective": 4,
+        "voter.majority_ratio": 0.7,
+        "voter.hysteresis": 6,
+        "voter.min_conf": 0.5,
+        "tracker.track_buffer": 45,
+        "tracker.match_thresh": 0.8,
+        "tracker.match_thresh_low": 0.4,
+        "state.lost_after": 20
+      },
+      "class_accuracy": 0.9882,
+      "flicker": 0.0128
+    }
+  ]
+}

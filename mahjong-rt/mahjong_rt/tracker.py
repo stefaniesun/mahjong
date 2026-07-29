@@ -145,6 +145,9 @@ class Track:
     age: int = 0  # frames since created
     hits: int = 1  # frames successfully matched
     time_since_update: int = 0
+    # Which detection this track matched this frame, or None if it is coasting. Replay
+    # uses it to look up the recorded classification without re-running the model.
+    det_index: int | None = None
     history: list[np.ndarray] = field(default_factory=list)
 
     def predict(self, homography: np.ndarray) -> np.ndarray:
@@ -187,26 +190,46 @@ class ByteTrackGMC:
         self.tracks: list[Track] = []
         self._next_id = 1
         self._gmc = GlobalMotionEstimator()
+        self.last_homography = np.eye(3, dtype=np.float32)
         self.stats: dict[str, Any] = {"gmc_ok": 0, "gmc_fail": 0, "new_tracks": 0, "removed": 0}
 
-    def update(self, detections: np.ndarray, scores: np.ndarray, frame_gray: np.ndarray | None = None) -> list[Track]:
-        """detections: (N,4) xyxy. scores: (N,). Returns tracks visible this frame."""
+    def update(
+        self,
+        detections: np.ndarray,
+        scores: np.ndarray,
+        frame_gray: np.ndarray | None = None,
+        homography: np.ndarray | None = None,
+    ) -> list[Track]:
+        """detections: (N,4) xyxy. scores: (N,). Returns tracks visible this frame.
+
+        `homography` lets a caller supply a motion estimate instead of computing one.
+        Replay has no pixels to run optical flow on, so it feeds back the matrix recorded
+        during the original pass — tracking parameters can then be swept without the
+        models or the video.
+        """
         detections = np.asarray(detections, dtype=np.float32).reshape(-1, 4)
         scores = np.asarray(scores, dtype=np.float32).reshape(-1)
 
-        homography = np.eye(3, dtype=np.float32)
-        if self.gmc_enabled and frame_gray is not None:
+        if homography is not None:
+            homography = np.asarray(homography, dtype=np.float32).reshape(3, 3)
+            degraded = False
+        elif self.gmc_enabled and frame_gray is not None:
             homography = self._gmc.estimate(frame_gray, detections)
             self.stats["gmc_ok" if self._gmc.last_ok else "gmc_fail"] += 1
-        # When the motion estimate fails, association gets a looser gate rather than a
-        # wrong warp — better to risk a sloppy match than to hard-break every track.
-        degraded = self.gmc_enabled and frame_gray is not None and not self._gmc.last_ok
+            # When the motion estimate fails, association gets a looser gate rather than
+            # a wrong warp — better a sloppy match than hard-breaking every track.
+            degraded = not self._gmc.last_ok
+        else:
+            homography = np.eye(3, dtype=np.float32)
+            degraded = False
+        self.last_homography = homography
         high_gate = self.fallback_match_thresh if degraded else self.match_thresh
         low_gate = self.fallback_match_thresh if degraded else self.match_thresh_low
 
         for track in self.tracks:
             track.age += 1
             track.time_since_update += 1
+            track.det_index = None
             track.bbox = track.predict(homography)
 
         high_idx = np.where(scores >= self.high_thresh)[0]
@@ -237,9 +260,10 @@ class ByteTrackGMC:
 
         for track_i, det_i in matched_pairs:
             self.tracks[track_i].update(detections[det_i], float(scores[det_i]), self.smooth_alpha)
+            self.tracks[track_i].det_index = det_i
 
         for det_i in remaining_high:
-            self.tracks.append(Track(track_id=self._next_id, bbox=detections[det_i].copy(), det_conf=float(scores[det_i])))
+            self.tracks.append(Track(track_id=self._next_id, bbox=detections[det_i].copy(), det_conf=float(scores[det_i]), det_index=det_i))
             self._next_id += 1
             self.stats["new_tracks"] += 1
 

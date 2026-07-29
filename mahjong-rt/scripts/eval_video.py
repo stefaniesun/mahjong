@@ -45,6 +45,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--max-clips", type=int, default=0)
     parser.add_argument("--stride", type=int, default=1, help="Process every Nth frame; 1 keeps evaluation faithful.")
+    parser.add_argument("--warmup-frames", type=int, default=30, help="Checkpoints this early in a clip are skipped: the voter needs several observations before anything can be confirmed, so scoring them measures cold start, not accuracy.")
     return parser
 
 
@@ -85,6 +86,24 @@ def run_clip(clip: dict[str, Any], testset: Path, args, cfg: dict[str, Any]) -> 
         raise SystemExit(f"打不开片段: {clip_path}")
     fps = clip.get("fps") or capture.get(cv2.CAP_PROP_FPS) or 30.0
 
+    # Checkpoint frames were exported at the source resolution, but the clip itself may
+    # have been re-encoded smaller (they get shipped around). Predictions come out in
+    # clip pixels, ground truth is in checkpoint pixels; without this scale every IoU is
+    # zero and the run reports a total failure that is purely a units mismatch.
+    clip_w = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
+    clip_h = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    ref = clip.get("checkpoints", [{}])[0].get("file")
+    gt_w, gt_h = clip_w, clip_h
+    if ref:
+        meta = testset / "checkpoints" / Path(ref).with_suffix(".json").name
+        if meta.exists():
+            payload = json.loads(meta.read_text(encoding="utf-8"))
+            gt_w, gt_h = int(payload.get("imageWidth", clip_w)), int(payload.get("imageHeight", clip_h))
+    scale_x = gt_w / max(clip_w, 1)
+    scale_y = gt_h / max(clip_h, 1)
+    if abs(scale_x - 1.0) > 1e-6 or abs(scale_y - 1.0) > 1e-6:
+        print(f"    片段 {clip_w}x{clip_h} vs 标注 {gt_w}x{gt_h}，预测框按 {scale_x:.2f}x 缩放对齐")
+
     wanted = {int(c["clip_frame"]): c for c in clip.get("checkpoints", [])}
     events: list[dict[str, Any]] = []
     snapshots: list[dict[str, Any]] = []
@@ -102,13 +121,17 @@ def run_clip(clip: dict[str, Any], testset: Path, args, cfg: dict[str, Any]) -> 
             from dataclasses import asdict
 
             events.append(asdict(event))
-        if index in wanted:
+        if index in wanted and index >= args.warmup_frames:
             snapshots.append(
                 {
                     "clip_frame": index,
                     "file": wanted[index]["file"],
                     "confirmed": [
-                        {"track_id": t.track_id, "label": t.label, "bbox": list(t.bbox)}
+                        {
+                            "track_id": t.track_id,
+                            "label": t.label,
+                            "bbox": [t.bbox[0] * scale_x, t.bbox[1] * scale_y, t.bbox[2] * scale_x, t.bbox[3] * scale_y],
+                        }
                         for t in pipeline.state_machine.confirmed_tiles()
                     ],
                 }
@@ -117,10 +140,12 @@ def run_clip(clip: dict[str, Any], testset: Path, args, cfg: dict[str, Any]) -> 
         processed += 1
     capture.release()
 
+    skipped_warmup = [c["file"] for c in clip.get("checkpoints", []) if int(c["clip_frame"]) < args.warmup_frames]
     return {
         "name": clip["name"],
         "events": events,
         "snapshots": snapshots,
+        "skipped_warmup": skipped_warmup,
         "frames": processed,
         "perf": pipeline.perf_summary(),
     }
@@ -148,6 +173,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
 
     args.out.mkdir(parents=True, exist_ok=True)
+    warmup_skipped: list[str] = []
     total_checkpoint = CheckpointResult()
     all_events: list[dict[str, Any]] = []
     all_latency_truth: list[dict[str, Any]] = []
@@ -163,6 +189,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         all_events.extend(result["events"])
         fps_values.append(result["perf"].get("fps", 0.0))
         continuity_inputs.extend(result["snapshots"])
+        warmup_skipped.extend(result.get("skipped_warmup", []))
 
         clip_checkpoint = CheckpointResult()
         for snapshot in result["snapshots"]:
@@ -203,6 +230,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "performance": {"fps": round(sum(fps_values) / len(fps_values), 2) if fps_values else 0.0},
         "clips": per_clip,
         "annotated_checkpoints": annotated_checkpoints,
+        "warmup_checkpoints_skipped": warmup_skipped,
         "leakage_note": manifest.get("leakage", {}).get("note", ""),
     }
     summary["acceptance"] = check_acceptance(summary)
@@ -210,7 +238,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     checkpoint = summary["checkpoint"]
     print(f"\n{'='*56}")
-    print(f"检查点: GT {checkpoint['gt_tiles']} 张牌 / {annotated_checkpoints} 帧")
+    print(f"检查点: GT {checkpoint['gt_tiles']} 张牌 / {annotated_checkpoints} 帧" + (f"  (跳过 {len(warmup_skipped)} 个冷启动检查点)" if warmup_skipped else ""))
     print(f"  召回 {checkpoint['recall']*100:.2f}%  精确 {checkpoint['precision']*100:.2f}%  类别准确 {checkpoint['class_accuracy']*100:.2f}%")
     for bucket, stats in checkpoint["by_bucket"].items():
         print(f"    {bucket:8s} n={stats['n']:4d} 召回 {stats['recall']*100:6.2f}%  类别 {stats['class_accuracy']*100:6.2f}%")
