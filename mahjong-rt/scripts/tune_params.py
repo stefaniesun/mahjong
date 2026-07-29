@@ -65,6 +65,9 @@ SEARCH_SPACE: dict[str, list[Any]] = {
     "tracker.track_buffer": [15, 30, 45],
     "tracker.match_thresh": [0.6, 0.7, 0.8],
     "tracker.match_thresh_low": [0.3, 0.4, 0.5],
+    # Appearance gating: 0 keeps the IoU-only behaviour, higher values let the class
+    # posterior veto a match that overlaps but does not look like the same tile.
+    "tracker.appearance_weight": [0.0, 0.3, 0.5, 0.7],
     "state.lost_after": [20, 30, 45],
 }
 

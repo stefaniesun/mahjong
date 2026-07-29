@@ -117,9 +117,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                 prob = exp / exp.sum(axis=1, keepdims=True)
                 labels = prob.argmax(axis=1).astype(np.int16)
                 confidences = prob.max(axis=1).astype(np.float32)
+                probs = prob.astype(np.float32)
             else:
                 labels = np.zeros((0,), np.int16)
                 confidences = np.zeros((0,), np.float32)
+                probs = np.zeros((0, len(classes)), np.float32)
 
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             homography = gmc.estimate(gray, xyxy)
@@ -132,6 +134,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     scores=scores,
                     labels=labels,
                     confidences=confidences,
+                    probs=probs,
                     homography=homography,
                 )
             )

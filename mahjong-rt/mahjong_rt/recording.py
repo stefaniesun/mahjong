@@ -36,6 +36,13 @@ class FrameRecord:
     scores: np.ndarray  # (N,) detector confidence
     labels: np.ndarray  # (N,) class index into `classes`
     confidences: np.ndarray  # (N,) classifier confidence
+    # (N,C) full class distribution, used as an appearance descriptor for association.
+    # The spec suggests penultimate-layer embeddings; the class posterior is 1280 -> 27
+    # dimensions for the same job and targets exactly the switches that hurt. Two
+    # adjacent tiles of the same kind have near-identical posteriors, but swapping those
+    # costs nothing — both read the same. Tiles of different kinds are far apart, and
+    # those are the swaps that corrupt the output.
+    probs: np.ndarray
     homography: np.ndarray  # (3,3) motion from the previous recorded frame
 
 
@@ -61,6 +68,7 @@ class Recording:
             "scores": np.concatenate([f.scores for f in self.frames]).astype(np.float32) if any(counts) else np.zeros((0,), np.float32),
             "labels": np.concatenate([f.labels for f in self.frames]).astype(np.int16) if any(counts) else np.zeros((0,), np.int16),
             "confidences": np.concatenate([f.confidences for f in self.frames]).astype(np.float32) if any(counts) else np.zeros((0,), np.float32),
+            "probs": np.concatenate([f.probs for f in self.frames]).astype(np.float16) if any(counts) else np.zeros((0, len(self.classes)), np.float16),
             "meta": np.array(
                 [self.clip, "|".join(self.classes), str(self.frame_width), str(self.frame_height), str(self.fps), str(self.stride)],
                 dtype=object,
@@ -92,6 +100,7 @@ class Recording:
                     scores=data["scores"][lo:hi],
                     labels=data["labels"][lo:hi],
                     confidences=data["confidences"][lo:hi],
+                    probs=data["probs"][lo:hi].astype(np.float32) if "probs" in data else np.zeros((hi - lo, len(recording.classes)), np.float32),
                     homography=data["homography"][i],
                 )
             )

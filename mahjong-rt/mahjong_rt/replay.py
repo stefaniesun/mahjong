@@ -43,7 +43,7 @@ def replay(
     wanted = checkpoints or {}
 
     for record in recording.frames:
-        tracks = tracker.update(record.boxes, record.scores, None, homography=record.homography)
+        tracks = tracker.update(record.boxes, record.scores, None, homography=record.homography, descriptors=record.probs)
 
         xywh: list[list[float]] = []
         observations: list[Observation | None] = []

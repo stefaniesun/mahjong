@@ -35,6 +35,15 @@ def iou_matrix(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     return np.where(union > 0, inter / np.maximum(union, 1e-9), 0.0).astype(np.float32)
 
 
+def cosine_similarity(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """Rows of `a` against rows of `b`, mapped to [0,1]. Empty inputs give an empty grid."""
+    if len(a) == 0 or len(b) == 0:
+        return np.zeros((len(a), len(b)), dtype=np.float32)
+    an = a / np.maximum(np.linalg.norm(a, axis=1, keepdims=True), 1e-9)
+    bn = b / np.maximum(np.linalg.norm(b, axis=1, keepdims=True), 1e-9)
+    return np.clip(an @ bn.T, 0.0, 1.0).astype(np.float32)
+
+
 def greedy_match(cost: np.ndarray, threshold: float) -> tuple[list[tuple[int, int]], list[int], list[int]]:
     """Greedy highest-IoU-first matching.
 
@@ -148,6 +157,7 @@ class Track:
     # Which detection this track matched this frame, or None if it is coasting. Replay
     # uses it to look up the recorded classification without re-running the model.
     det_index: int | None = None
+    descriptor: np.ndarray | None = None  # appearance, EMA over matched detections
     history: list[np.ndarray] = field(default_factory=list)
 
     def predict(self, homography: np.ndarray) -> np.ndarray:
@@ -177,6 +187,8 @@ class ByteTrackGMC:
         smooth_alpha: float = 0.8,
         gmc_enabled: bool = True,
         fallback_match_thresh: float = 0.3,
+        appearance_weight: float = 0.0,
+        appearance_momentum: float = 0.7,
     ) -> None:
         self.high_thresh = high_thresh
         self.low_thresh = low_thresh
@@ -187,6 +199,12 @@ class ByteTrackGMC:
         self.smooth_alpha = smooth_alpha
         self.gmc_enabled = gmc_enabled
         self.fallback_match_thresh = fallback_match_thresh
+        # Densely packed tiles look alike to an IoU-only association: neighbouring boxes
+        # overlap heavily, so the gate cannot tell which is which and ids swap. Blending
+        # in appearance similarity supplies the missing information. Off by default so
+        # existing behaviour is unchanged until a sweep shows it earns its place.
+        self.appearance_weight = appearance_weight
+        self.appearance_momentum = appearance_momentum
         self.tracks: list[Track] = []
         self._next_id = 1
         self._gmc = GlobalMotionEstimator()
@@ -199,6 +217,7 @@ class ByteTrackGMC:
         scores: np.ndarray,
         frame_gray: np.ndarray | None = None,
         homography: np.ndarray | None = None,
+        descriptors: np.ndarray | None = None,
     ) -> list[Track]:
         """detections: (N,4) xyxy. scores: (N,). Returns tracks visible this frame.
 
@@ -236,10 +255,21 @@ class ByteTrackGMC:
         low_idx = np.where((scores >= self.low_thresh) & (scores < self.high_thresh))[0]
 
         # Stage 1: confident detections against every track.
+        def blend(track_idx: list[int], det_idx: np.ndarray) -> np.ndarray:
+            cost = iou_matrix(np.stack([self.tracks[i].bbox for i in track_idx]), detections[det_idx])
+            if self.appearance_weight <= 0 or descriptors is None or not len(det_idx):
+                return cost
+            have = [i for i in track_idx if self.tracks[i].descriptor is not None]
+            if len(have) != len(track_idx):
+                return cost
+            sim = cosine_similarity(np.stack([self.tracks[i].descriptor for i in track_idx]), descriptors[det_idx])
+            w = self.appearance_weight
+            return ((1.0 - w) * cost + w * cost * sim).astype(np.float32)
+
         pool = list(range(len(self.tracks)))
         matched_pairs: list[tuple[int, int]] = []
         if pool and len(high_idx):
-            cost = iou_matrix(np.stack([self.tracks[i].bbox for i in pool]), detections[high_idx])
+            cost = blend(pool, high_idx)
             matches, un_tracks, un_dets = greedy_match(cost, high_gate)
             for ti, di in matches:
                 matched_pairs.append((pool[ti], int(high_idx[di])))
@@ -252,18 +282,31 @@ class ByteTrackGMC:
         # Stage 2: leftovers get a shot at the low-confidence detections. This is what
         # keeps a briefly blurred tile alive instead of spawning a fresh id later.
         if remaining_tracks and len(low_idx):
-            cost = iou_matrix(np.stack([self.tracks[i].bbox for i in remaining_tracks]), detections[low_idx])
+            cost = blend(remaining_tracks, low_idx)
             matches, un_tracks, _ = greedy_match(cost, low_gate)
             for ti, di in matches:
                 matched_pairs.append((remaining_tracks[ti], int(low_idx[di])))
             remaining_tracks = [remaining_tracks[i] for i in un_tracks]
 
         for track_i, det_i in matched_pairs:
-            self.tracks[track_i].update(detections[det_i], float(scores[det_i]), self.smooth_alpha)
-            self.tracks[track_i].det_index = det_i
+            track = self.tracks[track_i]
+            track.update(detections[det_i], float(scores[det_i]), self.smooth_alpha)
+            track.det_index = det_i
+            if descriptors is not None and det_i < len(descriptors):
+                d = descriptors[det_i].astype(np.float32)
+                m = self.appearance_momentum
+                track.descriptor = d if track.descriptor is None else (m * track.descriptor + (1.0 - m) * d)
 
         for det_i in remaining_high:
-            self.tracks.append(Track(track_id=self._next_id, bbox=detections[det_i].copy(), det_conf=float(scores[det_i]), det_index=det_i))
+            self.tracks.append(
+                Track(
+                    track_id=self._next_id,
+                    bbox=detections[det_i].copy(),
+                    det_conf=float(scores[det_i]),
+                    det_index=det_i,
+                    descriptor=None if descriptors is None or det_i >= len(descriptors) else descriptors[det_i].astype(np.float32).copy(),
+                )
+            )
             self._next_id += 1
             self.stats["new_tracks"] += 1
 
