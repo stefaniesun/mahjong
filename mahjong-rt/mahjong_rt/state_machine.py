@@ -134,7 +134,7 @@ class StateMachine:
                 tile.state = TileState.OCCLUDED
 
         if self.emit_frame_summary:
-            confirmed = [t for t in self.tiles.values() if t.state == TileState.CONFIRMED and t.label]
+            confirmed = self.confirmed_tiles()
             by_zone: dict[str, int] = {}
             for tile in confirmed:
                 by_zone[tile.zone] = by_zone.get(tile.zone, 0) + 1
@@ -150,6 +150,9 @@ class StateMachine:
                             "bbox": [round(v, 1) for v in t.bbox],
                             "zone": t.zone,
                             "state": t.state.value,
+                            # False means "still on the table, just not visible in this
+                            # frame" — the consumer should keep it, not drop it.
+                            "visible": t.state == TileState.CONFIRMED,
                         }
                         for t in confirmed
                     ],
@@ -159,5 +162,14 @@ class StateMachine:
             )
         return events
 
-    def confirmed_tiles(self) -> list[TileTrack]:
-        return [t for t in self.tiles.values() if t.state == TileState.CONFIRMED and t.label]
+    def confirmed_tiles(self, include_occluded: bool = True) -> list[TileTrack]:
+        """Tiles believed to be on the table right now.
+
+        Occluded tiles are included by default. A mahjong tile that has been placed does
+        not move again: a hand passing over it hides it for a moment, it does not remove
+        it. Dropping occluded tiles from the world state made them vanish from the output
+        after two missed frames — visible as tiles blinking out whenever someone reached
+        across the table, even though nothing had actually left.
+        """
+        states = {TileState.CONFIRMED, TileState.OCCLUDED} if include_occluded else {TileState.CONFIRMED}
+        return [t for t in self.tiles.values() if t.state in states and t.label]

@@ -27,8 +27,10 @@ voter:
   full_weight_px: 40      # 短边 >= 此值的 crop 给满权重
 
 state:
-  occluded_after: 2
-  lost_after: 30
+  occluded_after: 2        # 丢 2 帧标记为"被遮挡"，但仍保留在输出中
+  # 麻将牌放下就不动了：真正离场只有碰杠取牌和一局结束。原来 30 帧(stride 3 下约 3 秒)
+  # 会把被手挡住的牌整个删掉，回来时变成新 ID、从头投票——既涨 ID 切换又涨确认延迟。
+  lost_after: 300
   emit_frame_summary: true
 
 zones:
