@@ -39,7 +39,8 @@ mahjong-prelabeler/
 *.pt
 *.onnx
 
-
+# Git worktrees
+.worktrees/
 
 
 
