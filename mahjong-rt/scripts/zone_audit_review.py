@@ -86,8 +86,13 @@ def main(argv=None) -> int:
         if img is None:
             continue
         item = data[f["image"]]
+        # Missed tiles all carry box == -1, so the box number alone does not identify a
+        # row — every missing box in one image would share a key and move together. The
+        # bbox is what makes it unique.
+        x, y, w, h = (round(v) for v in f["bbox"])
         rows.append({
-            "id": f"{f['image']}#{f['box']}",
+            "id": f"{f['image']}#{f['box']}@{x},{y},{w},{h}",
+            "label": f"{f['image']}#{f['box']}" if f["box"] >= 0 else f"{f['image']} 漏标@{x},{y}",
             "image": f["image"], "box": f["box"], "bbox": f["bbox"],
             "zone": f["zone"], "cls": f["cls"], "severity": f["severity"],
             "kinds": f["kinds"], "details": f["details"],
@@ -125,7 +130,8 @@ img{border-radius:5px;background:#000}
 <div id=list></div>
 <script>
 const ROWS=__ROWS__, ZH=__ZH__, ZONES=__ZONES__;
-const KEY='zone_audit_decisions';
+// v2: row ids used to collide for missed tiles, so old saves are not reusable.
+const KEY='zone_audit_decisions_v2';
 let dec=JSON.parse(localStorage.getItem(KEY)||'{}');
 function prog(){
   const n=Object.keys(dec).length;
@@ -150,7 +156,7 @@ function render(){
     return `<div class="card${d?' done':''}">
       <img src="data:image/jpeg;base64,${r.thumb}">
       <div class=meta>
-        <div class=tt>${r.id} &nbsp;<span style="color:#8a8a92">${r.cls}</span>
+        <div class=tt>${r.label} &nbsp;<span style="color:#8a8a92">${r.cls}</span>
           <span class="sev ${r.severity}">${({certain:'确定错误',likely:'很可能',suspect:'存疑'})[r.severity]}</span></div>
         <div class=dt>当前标注: <b>${ZH[r.zone]||r.zone}</b></div>
         ${r.details.map(t=>'<div class=dt>· '+t+'</div>').join('')}
