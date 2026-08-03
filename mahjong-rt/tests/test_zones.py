@@ -42,15 +42,33 @@ def test_big_low_tile_is_own_hand():
 
 
 def test_lateral_cuts_pick_side_seats():
-    boxes = [[10, 300, 30, 30], [1240, 300, 30, 30]] + [[600 + i * 30, 300, 30, 30] for i in range(5)]
+    # The left seat needs its tiles clustered, not merely far left: an isolated box over
+    # there is more often a stray pool tile. Spacings here match what the labelled data
+    # shows — a side seat's boxes overlap heavily (median nearest neighbour 0.31 of a
+    # box width) because those tiles are seen edge-on and their boxes pile up.
+    boxes = [[10, 300, 30, 30], [18, 300, 30, 30], [1240, 300, 30, 30]] + [[600 + i * 30, 300, 30, 30] for i in range(5)]
     result = zones_for(boxes)
     assert result[0] == Zone.SEAT_LEFT.value
-    assert result[1] == Zone.SEAT_RIGHT.value
+    assert result[1] == Zone.SEAT_LEFT.value
+    assert result[2] == Zone.SEAT_RIGHT.value
 
 
-def test_high_and_small_is_across():
+def test_isolated_far_left_tile_is_not_a_seat():
+    """Density is the signal that lifted accuracy 88.9% -> 93.1%; pin it."""
+    boxes = [[10, 300, 30, 30]] + [[600 + i * 32, 300, 30, 30] for i in range(6)]
+    assert zones_for(boxes)[0] == Zone.RIVER.value
+
+
+def test_high_and_isolated_is_across():
+    # High in frame and away from neighbours. A tile equally high but packed in with
+    # others belongs to the pool — that density test is what separates the two.
     boxes = [[640, 100, 18, 18]] + [[500 + i * 40, 300, 40, 40] for i in range(6)]
     assert zones_for(boxes)[0] == Zone.SEAT_ACROSS.value
+
+
+def test_high_but_crowded_is_river():
+    boxes = [[640, 100, 18, 18], [647, 100, 18, 18], [654, 100, 18, 18]] + [[500 + i * 40, 300, 40, 40] for i in range(5)]
+    assert zones_for(boxes)[0] == Zone.RIVER.value
 
 
 def test_middle_scatter_defaults_to_river():
@@ -76,8 +94,9 @@ def test_accuracy_on_labelled_set():
         correct += sum(1 for a, b in zip(predicted, item["zones"]) if a == b)
         total += len(predicted)
     accuracy = correct / total
-    # Measured 92.5%; the floor guards against regressions, not against improvement.
-    assert accuracy >= 0.90, f"zone accuracy dropped to {accuracy:.3f}"
+    # In-sample score of the shipped thresholds is 94.4%; the honest number is the
+    # image-level cross-validated 93.1%. The floor guards against regressions.
+    assert accuracy >= 0.92, f"zone accuracy dropped to {accuracy:.3f}"
 
 
 @pytest.mark.skipif(not LABELS.exists(), reason="zone_labels.json not present")

@@ -11,9 +11,18 @@ mistake was structural, not numeric: they tried hard to carve out three seats, a
 doing so shredded the pool, which is *the majority class* at 52.5% of all tiles. The
 seats together are only 17.5%.
 
-So the rule now defaults to river and only claims a seat on clear evidence. Measured
-per-zone recall on the labelled set: hand 97.0%, river 95.3%, right 97.8%, left 73.5%,
-across 71.0% — 92.5% overall.
+So the rule defaults to river and only claims a seat on clear evidence.
+
+**Density is the fourth signal, and the one that broke the plateau.** Position and size
+alone had stalled at 88.9% under image-level cross-validation (an earlier 92.5% figure
+was an in-sample score — the thresholds had been grid-searched on the very data they
+were then scored against). Adding nearest-neighbour distance took it to **93.1%
+cross-validated**. The pool is the *dense* region — discards pile into the middle —
+while a seat's tiles sit further apart relative to their own size. A side seat is the
+inverse: its boxes overlap heavily (median nearest neighbour 0.31 of a box width),
+because those tiles are seen edge-on and their boxes pile up.
+
+Per-zone recall now: hand 99.2%, river 97.2%, right 97.8%, left 77.6%, across 71.0%.
 
 What the labels showed (median, and 10-90% spread of normalised x):
 
@@ -47,13 +56,18 @@ class ZoneConfig:
     enabled: bool = True
     # Own hand: much larger than everything else, and low in frame.
     hand_size_ratio: float = 1.4
-    hand_min_ny: float = 0.60
+    hand_min_ny: float = 0.55
     # Side seats: outside the pool's lateral spread.
-    left_max_nx: float = 0.28
+    left_max_nx: float = 0.30
     right_min_nx: float = 0.78
-    # Seat across: overlaps the pool horizontally, so it needs both "high" and "small".
+    # Seat across: overlaps the pool horizontally, so position alone cannot separate it.
     across_max_ny: float = 0.28
-    across_max_size_ratio: float = 0.9
+    # How isolated a tile is, as nearest-neighbour distance in units of its own width.
+    # The pool is the *dense* region — discards pile into the middle — while a seat's
+    # tiles sit further apart. Adding this one feature took cross-validated accuracy
+    # from 88.9% to 93.1%; position and size alone had plateaued.
+    across_min_nn: float = 0.55
+    left_max_nn: float = 0.45
 
 
 def analyze_layout(
@@ -71,18 +85,33 @@ def analyze_layout(
     short = np.minimum(arr[:, 2], arr[:, 3])
     median = float(np.median(short))
     size_ratio = short / max(median, 1e-6)
-    nx = (arr[:, 0] + arr[:, 2] / 2.0) / max(frame_w, 1)
-    ny = (arr[:, 1] + arr[:, 3] / 2.0) / max(frame_h, 1)
+    cx = arr[:, 0] + arr[:, 2] / 2.0
+    cy = arr[:, 1] + arr[:, 3] / 2.0
+    nx = cx / max(frame_w, 1)
+    ny = cy / max(frame_h, 1)
+
+    # Distance to the closest other tile, in units of this tile's own width. Normalising
+    # by own width keeps it comparable across depth: a far tile is smaller, and so are
+    # the gaps around it.
+    nn = np.empty(n, dtype=np.float32)
+    for i in range(n):
+        d = np.hypot(cx - cx[i], cy - cy[i])
+        d[i] = np.inf
+        nn[i] = float(d.min()) / max(float(arr[i, 2]), 1.0) if n > 1 else 9.9
 
     zones: list[str] = []
     for i in range(n):
         if size_ratio[i] >= config.hand_size_ratio and ny[i] >= config.hand_min_ny:
             zones.append(Zone.MY_HAND.value)
-        elif nx[i] <= config.left_max_nx:
+        elif nx[i] <= config.left_max_nx and nn[i] <= config.left_max_nn:
+            # Left seat's tiles cluster together; something equally far left but isolated
+            # is more often a stray pool tile.
             zones.append(Zone.SEAT_LEFT.value)
         elif nx[i] >= config.right_min_nx:
             zones.append(Zone.SEAT_RIGHT.value)
-        elif ny[i] <= config.across_max_ny and size_ratio[i] <= config.across_max_size_ratio:
+        elif ny[i] <= config.across_max_ny and nn[i] >= config.across_min_nn:
+            # Across overlaps the pool horizontally. What separates them is density: the
+            # pool is packed, a seat's tiles are not.
             zones.append(Zone.SEAT_ACROSS.value)
         else:
             # Everything unclaimed is the shared middle scatter. Defaulting here is what
