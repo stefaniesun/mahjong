@@ -1,1152 +1,847 @@
-# Static Zone Recognition Implementation Plan
+# Adaptive Tile-Group Zone Recognition Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a calibrated, perspective-invariant static-image zone recognizer that combines table geometry, tile orientation, constrained groups, and global scoring, with 100% accuracy and coverage as a release gate on the current 899 boxes and every sealed test set.
+**Goal:** Replace pixel-threshold and single-link zone assignment with a deterministic, table-corner-free recognizer that derives tile rows, layout groups, player anchors, and final zones from each image's existing boxes and optional classes.
 
-**Architecture:** Keep `mahjong_rt.zones` as the backward-compatible facade and add focused modules for table normalization, calibration, orientation scoring, layout grouping, and structured solving. The strict path requires table geometry and a calibration profile; the legacy heuristic remains explicitly selectable for replay compatibility. Implement in measurable stages so geometry, orientation, and structure are evaluated independently before their signals are combined.
+**Architecture:** Keep `mahjong_rt.zones` as the backward-compatible facade. Add focused modules for frame-relative tile relations, direction-constrained row extraction, semantic layout groups, adaptive anchors, and exact group-level assignment; every stage consumes only existing boxes, image dimensions, and optional classes. The old heuristic remains explicitly selectable, while the new `adaptive_groups` mode is evaluated without table corners, calibration profiles, external models, or per-image exceptions.
 
-**Tech Stack:** Python 3.10+, NumPy, OpenCV, ONNX Runtime, PyYAML, pytest; no SciPy, NetworkX, or integer-programming dependency.
+**Tech Stack:** Python 3.10+, NumPy, pytest, standard library; no new runtime dependency and no table-corner/homography input.
 
 ---
 
-## Scope and release gates
+## Scope and non-negotiable constraints
 
-This plan implements the complete static-image path described in `docs/superpowers/specs/2026-08-03-static-zone-recognition-design.md`. Automatic table-border detection and manual/annotated corners share the same `TableGeometry` interface. The current 20-image dataset does not yet contain table corners. It also contains five legacy `opponent_wall` labels even though the accepted task contract has five zones and excludes walls. The first data deliverable therefore includes deterministic corner annotation, independent double-review of all legacy/ambiguous labels, and an auditable label-migration report before model work starts.
+This plan replaces the superseded perspective-normalization plan and implements `docs/superpowers/specs/2026-08-03-static-zone-recognition-design.md`.
 
-The implementation must not overfit silently. There are four distinct gates:
+- Own seat remains below, left seat left, across seat above, and right seat right.
+- Camera position and perspective may vary, but that directional relationship remains stable.
+- Production inputs are `xywh` boxes, frame dimensions, and optional existing tile classes.
+- No table corners, table-border detector, homography, calibration profile, orientation model, or new manual annotation enters prediction.
+- Scene quantities use per-image medians, robust spreads, and ranks; fixed values express only dimensionless algorithm safeguards or Mahjong structure.
+- Existing `legacy` behavior remains unchanged for callers that do not select `adaptive_groups`.
+- Existing experimental `table_geometry.py` and annotation tooling are left isolated; they are not imported by the adaptive path. Removing them is outside this implementation because deletion would erase already tested experimental work without benefiting runtime behavior.
+- The five historical `opponent_wall` labels must be resolved under the canonical five-zone contract before a 899/899 claim. The existing independent-review tool remains the mechanism; no automatic migration is allowed.
 
-1. **Data-readiness gate:** all 899 labels conform to the five-zone contract, every image has valid corners, two reviewers agree on migrated/ambiguous samples, and the migration audit passes.
-2. **Development gate:** unit, compatibility, schema, synthetic-perspective, and image-level five-fold tests pass.
-3. **Current-set gate:** all 899 boxes receive out-of-fold predictions from profiles that never saw their image and reach 899/899 with 100% coverage. A separate frozen-profile holdout result reports its actual evaluated count and is never mislabeled as 899/899.
-4. **Generalization gate:** a frozen profile fitted on a new scene's calibration split reaches N/N on its sealed image-level test split. A failed sealed set becomes development data, and a new sealed set is required after changes.
+## Release gates
 
-A task may improve the implementation without satisfying gates 3 or 4. No task may claim the 100% goal is achieved until the out-of-fold 899/899 gate and a genuinely sealed N/N gate are both demonstrated by the evaluator. A fixed profile evaluated on images used to fit it is diagnostic only and cannot satisfy either gate.
+Before Task 8 current-set evaluation, generate and commit `output/zone_test_manifest.txt` as the sorted list of all 20 unique `image` fields from the top-level annotation JSON array after canonical label review. Record its SHA-256 and assert exactly 20 records and 899 boxes. The manifest is an inventory, not a source of zones.
+
+1. **Compatibility:** all existing legacy tests pass byte-for-byte.
+2. **Structural correctness:** synthetic row, anti-chaining, group, anchor, missing-seat, and transform-invariance tests pass.
+3. **Current set:** all canonical boxes receive predictions; accuracy, coverage, and every present-zone recall are 100%.
+4. **Sealed set:** after code/config freeze, a newly sealed image set reaches N/N. Human labels act only as post-prediction truth and never as algorithm input.
+
+No implementation task may claim 100% unless the evaluator report itself records a passing gate.
 
 ## File map
 
 ### New production files
 
-- `mahjong-rt/mahjong_rt/zone_types.py` — immutable shared types, strict context, diagnostics, and schema constants.
-- `mahjong-rt/mahjong_rt/table_geometry.py` — corner ordering, validation, homography, mapped tile geometry, and automatic border locator.
-- `mahjong-rt/mahjong_rt/zone_calibration.py` — load/save/version validation and fitting of calibration profiles.
-- `mahjong-rt/mahjong_rt/tile_orientation.py` — classifier adapter and four-rotation orientation scores.
-- `mahjong-rt/mahjong_rt/layout_graph.py` — constrained adjacency graph and non-chaining groups.
-- `mahjong-rt/mahjong_rt/zone_solver.py` — explainable unary costs, group consistency, deterministic global assignment, and margins.
+- `mahjong-rt/mahjong_rt/tile_relations.py` — immutable frame-normalized tile features and pairwise relation matrix.
+- `mahjong-rt/mahjong_rt/tile_lines.py` — deterministic direction-constrained candidate row extraction without single-link chaining.
+- `mahjong-rt/mahjong_rt/layout_groups.py` — hand, meld, river-block, and singleton candidates.
+- `mahjong-rt/mahjong_rt/layout_anchors.py` — robust layout center, directional player anchors, and inside/outside relationships.
+- `mahjong-rt/mahjong_rt/adaptive_zone_solver.py` — group-level candidate costs, exact assignment, singleton attachment, and diagnostics.
 
 ### New scripts and tests
 
-- `mahjong-rt/scripts/annotate_table_corners.py` — annotate four corners in the existing 20 images.
-- `mahjong-rt/scripts/review_zone_labels.py` — collect two independent reviews and generate the five-zone migration audit.
-- `mahjong-rt/scripts/calibrate_zones.py` — fit a versioned profile from an explicit calibration manifest.
-- `mahjong-rt/scripts/eval_zones.py` — immutable evaluation/reporting entry point.
-- `mahjong-rt/scripts/eval_zone_orientation.py` — measure whether the existing classifier contains useful rotation signal.
-- `mahjong-rt/tests/test_table_geometry.py`
-- `mahjong-rt/tests/test_zone_calibration.py`
-- `mahjong-rt/tests/test_tile_orientation.py`
-- `mahjong-rt/tests/test_layout_graph.py`
-- `mahjong-rt/tests/test_zone_solver.py`
-- `mahjong-rt/tests/test_zone_pipeline.py`
+- `mahjong-rt/scripts/eval_zones.py` — immutable evaluator for current and sealed manifests whose records identify the unique `image` field of each annotation-array record; images are optional metadata, not inference input.
+- `mahjong-rt/tests/test_tile_relations.py`
+- `mahjong-rt/tests/test_tile_lines.py`
+- `mahjong-rt/tests/test_layout_groups.py`
+- `mahjong-rt/tests/test_layout_anchors.py`
+- `mahjong-rt/tests/test_adaptive_zone_solver.py`
+- `mahjong-rt/tests/test_adaptive_zone_pipeline.py`
 - `mahjong-rt/tests/test_eval_zones.py`
 
 ### Modified files
 
-- `mahjong-rt/mahjong_rt/zones.py` — preserve legacy implementation and dispatch to strict structured path when context is supplied.
-- `mahjong-rt/mahjong_rt/pipeline.py` — pass frame/corners/profile only when strict static zones are configured; preserve default event schema.
-- `mahjong-rt/mahjong_rt/replay.py` — reject strict mode when recordings lack required static-image context.
-- `mahjong-rt/configs/pipeline.yaml` — add explicit `mode`, profile path, table-locator, and failure-policy keys.
-- `mahjong-rt/tests/test_zones.py` — pin legacy compatibility and move strict 100% assertion to the dedicated evaluator.
-- `output/zone_annotation/zone_labels_with_class.json` — add `table_corners` only through the annotation script; do not change boxes, zones, classes, or image order.
+- `mahjong-rt/mahjong_rt/zone_types.py` — remove `TableGeometry` as a required member of `ZoneAnalysisContext`; retain old geometry/orientation types only for experimental compatibility.
+- `mahjong-rt/mahjong_rt/zones.py` — preserve legacy path and dispatch explicit `adaptive_groups` mode.
+- `mahjong-rt/mahjong_rt/pipeline.py` — optionally pass already available classes; never request table geometry.
+- `mahjong-rt/mahjong_rt/replay.py` — allow adaptive mode using recorded boxes/classes when present.
+- `mahjong-rt/configs/pipeline.yaml` — expose only adaptive dimensionless safeguards; no table locator/profile keys.
+- `mahjong-rt/tests/test_zone_types.py`
+- `mahjong-rt/tests/test_zones.py`
 
 ---
 
-### Task 1: Shared strict-zone contracts
+### Task 1: Replace strict context with existing-input context
 
 **Files:**
-- Create: `mahjong-rt/mahjong_rt/zone_types.py`
-- Test: `mahjong-rt/tests/test_zone_types.py`
+- Modify: `mahjong-rt/mahjong_rt/zone_types.py`
+- Modify: `mahjong-rt/tests/test_zone_types.py`
 
-- [ ] **Step 1: Write failing tests for immutable context and diagnostics**
+- [ ] **Step 1: Write failing tests for a table-free context**
+
+Add:
 
 ```python
-from __future__ import annotations
-
-import numpy as np
-import pytest
-
-from mahjong_rt.zone_types import (
-    OrientationScore,
-    TableGeometry,
-    TileZoneDiagnostic,
-    ZoneAnalysisContext,
-)
+def test_zone_context_does_not_require_table_geometry():
+    context = ZoneAnalysisContext(classes=("w1", "w1", "w1"), strict=True)
+    context.validate_for(3)
+    assert context.classes == ("w1", "w1", "w1")
 
 
-def test_table_geometry_requires_four_finite_points():
-    with pytest.raises(ValueError, match="four finite points"):
-        TableGeometry(corners=np.asarray([[0.0, 0.0], [1.0, 1.0]], np.float32))
-
-
-def test_orientation_score_normalizes_and_reports_margin():
-    score = OrientationScore.from_logits([1.0, 3.0, 0.0, 0.0])
-    assert np.isclose(sum(score.probabilities), 1.0)
-    assert score.best_rotation == 90
-    assert score.margin > 0.0
-
-
-def test_zone_context_rejects_box_count_mismatch():
-    with pytest.raises(ValueError, match="orientation scores"):
-        ZoneAnalysisContext(
-            table=TableGeometry.unit_square(1280, 720),
-            orientation_batch=OrientationBatch(
-                scores=(),
-                provenance=OrientationProvenance("a" * 64, "cls-v1", "entropy-v1"),
-            ),
-            classes=("w1",),
-        ).validate_for(1)
-
-
-def test_diagnostic_is_json_serializable():
-    diagnostic = TileZoneDiagnostic(
-        zone="river",
-        best_cost=0.2,
-        second_cost=0.7,
-        margin=0.5,
-        evidence=("near_center",),
-        ambiguous=False,
-        failure=None,
-    )
-    assert diagnostic.to_dict()["margin"] == 0.5
+def test_zone_context_rejects_class_count_mismatch():
+    context = ZoneAnalysisContext(classes=("w1",))
+    with pytest.raises(ValueError, match="classes length"):
+        context.validate_for(2)
 ```
 
-- [ ] **Step 2: Run the focused test and verify it fails**
+Change existing context construction so it no longer supplies `table=`. Keep the independent tests for `TableGeometry` and orientation value objects because those experimental types still exist.
 
-Run from `mahjong-rt`:
+- [ ] **Step 2: Run the focused test and verify failure**
 
 ```powershell
 python -m pytest tests/test_zone_types.py -q
 ```
 
-Expected: collection fails with `ModuleNotFoundError: No module named 'mahjong_rt.zone_types'`.
+Expected: FAIL because `ZoneAnalysisContext.table` is required.
 
-- [ ] **Step 3: Implement the shared contracts**
+- [ ] **Step 3: Make context table-free**
 
-Create these public contracts in `mahjong_rt/zone_types.py`:
+Replace only the context dataclass with:
 
 ```python
-from __future__ import annotations
-
-from dataclasses import dataclass
-from typing import Any, Sequence
-
-import numpy as np
-
-CALIBRATION_SCHEMA_VERSION = 1
-ROTATIONS = (0, 90, 180, 270)
-
-
-@dataclass(frozen=True)
-class TableGeometry:
-    corners: np.ndarray
-    source: str = "annotated"
-    confidence: float = 1.0
-
-    def __post_init__(self) -> None:
-        value = np.asarray(self.corners, dtype=np.float32).copy()
-        if value.shape != (4, 2) or not np.isfinite(value).all():
-            raise ValueError("table corners must contain four finite points")
-        value.setflags(write=False)
-        object.__setattr__(self, "corners", value)
-
-    @classmethod
-    def unit_square(cls, width: int, height: int) -> "TableGeometry":
-        return cls(np.asarray([[0, height], [0, 0], [width, 0], [width, height]], np.float32))
-
-
-@dataclass(frozen=True)
-class OrientationScore:
-    probabilities: tuple[float, float, float, float]
-    best_rotation: int
-    margin: float
-
-    def __post_init__(self) -> None:
-        probs = np.asarray(self.probabilities, dtype=np.float64)
-        if probs.shape != (4,) or not np.isfinite(probs).all() or (probs < 0).any() or not np.isclose(probs.sum(), 1.0):
-            raise ValueError("orientation probabilities must be normalized")
-        order = np.argsort(probs)
-        expected_best = ROTATIONS[int(order[-1])]
-        expected_margin = float(probs[order[-1]] - probs[order[-2]])
-        if self.best_rotation != expected_best or not np.isclose(self.margin, expected_margin):
-            raise ValueError("orientation best_rotation and margin must match probabilities")
-
-    @classmethod
-    def from_logits(cls, logits: Sequence[float]) -> "OrientationScore":
-        values = np.asarray(logits, dtype=np.float64)
-        if values.shape != (4,) or not np.isfinite(values).all():
-            raise ValueError("orientation logits must contain four finite values")
-        shifted = values - values.max()
-        probs = np.exp(shifted) / np.exp(shifted).sum()
-        return cls.from_probabilities(probs)
-
-    @classmethod
-    def from_probabilities(cls, probabilities: Sequence[float]) -> "OrientationScore":
-        probs = np.asarray(probabilities, dtype=np.float64)
-        if probs.shape != (4,) or not np.isfinite(probs).all() or (probs < 0).any() or probs.sum() <= 0:
-            raise ValueError("orientation probabilities must contain four finite non-negative values")
-        probs = probs / probs.sum()
-        order = np.argsort(probs)
-        best = int(order[-1])
-        return cls(tuple(float(x) for x in probs), ROTATIONS[best], float(probs[order[-1]] - probs[order[-2]]))
-
-
-@dataclass(frozen=True)
-class OrientationProvenance:
-    model_sha256: str
-    preprocessing_version: str
-    scorer_version: str
-    training_manifest_sha256: str | None = None
-    training_images: tuple[str, ...] | None = None
-
-
-@dataclass(frozen=True)
-class OrientationBatch:
-    scores: tuple[OrientationScore, ...]
-    provenance: OrientationProvenance
-
-
-@dataclass(frozen=True)
-class TileZoneDiagnostic:
-    zone: str
-    best_cost: float
-    second_cost: float
-    margin: float
-    evidence: tuple[str, ...]
-    ambiguous: bool
-    failure: str | None
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "zone": self.zone,
-            "best_cost": self.best_cost,
-            "second_cost": self.second_cost,
-            "margin": self.margin,
-            "evidence": list(self.evidence),
-            "ambiguous": self.ambiguous,
-            "failure": self.failure,
-        }
-
-
 @dataclass(frozen=True)
 class ZoneAnalysisContext:
-    table: TableGeometry
-    orientation_batch: OrientationBatch | None = None
     classes: tuple[str, ...] | None = None
     strict: bool = True
 
+    def __post_init__(self) -> None:
+        if self.classes is not None:
+            object.__setattr__(self, "classes", tuple(self.classes))
+
     def validate_for(self, box_count: int) -> None:
-        if self.orientation_batch is not None and len(self.orientation_batch.scores) != box_count:
-            raise ValueError("orientation scores length must match boxes")
+        if box_count < 0:
+            raise ValueError("box count must be non-negative")
         if self.classes is not None and len(self.classes) != box_count:
             raise ValueError("classes length must match boxes")
 ```
 
-- [ ] **Step 4: Run the focused test and all existing zone tests**
+Do not delete `TableGeometry`, `OrientationScore`, or `OrientationBatch`; they remain isolated experimental contracts and must not be imported by the adaptive path.
+
+- [ ] **Step 4: Run contract and legacy tests**
 
 ```powershell
 python -m pytest tests/test_zone_types.py tests/test_zones.py -q
 ```
 
-Expected: all tests pass; existing `assign_zones` behavior is unchanged.
+Expected: PASS.
 
-- [ ] **Step 5: Commit the contracts**
+- [ ] **Step 5: Commit**
 
 ```powershell
 git add mahjong_rt/zone_types.py tests/test_zone_types.py
-git commit -m "feat(zones): define structured zone contracts"
+git commit -m "refactor(zones): make structured context table-free"
 ```
 
 ---
 
-### Task 2: Data readiness, label migration, and perspective normalization
+### Task 2: Build per-image tile relations
 
 **Files:**
-- Create: `mahjong-rt/mahjong_rt/table_geometry.py`
-- Create: `mahjong-rt/tests/test_table_geometry.py`
-- Create: `mahjong-rt/tests/test_zone_label_review.py`
-- Create: `mahjong-rt/scripts/annotate_table_corners.py`
-- Create: `mahjong-rt/scripts/review_zone_labels.py`
-- Create: `output/zone_annotation/zone_label_migration_audit.json`
-- Modify: `output/zone_annotation/zone_labels_with_class.json`
+- Create: `mahjong-rt/mahjong_rt/tile_relations.py`
+- Create: `mahjong-rt/tests/test_tile_relations.py`
 
-- [ ] **Step 1: Write failing geometry tests**
+- [ ] **Step 1: Write failing relation and invariance tests**
 
 ```python
 import numpy as np
 import pytest
 
-from mahjong_rt.table_geometry import TableNormalizer, order_corners
-from mahjong_rt.zone_types import TableGeometry
+from mahjong_rt.tile_relations import build_tile_relations
 
 
-def test_order_corners_returns_left_bottom_clockwise_contract():
-    points = np.asarray([[900, 100], [100, 600], [100, 100], [900, 600]], np.float32)
-    ordered = order_corners(points)
-    np.testing.assert_allclose(ordered, [[100, 600], [100, 100], [900, 100], [900, 600]])
+def test_relations_use_frame_median_scale():
+    boxes = [[100, 100, 20, 40], [130, 100, 20, 40], [200, 200, 40, 80]]
+    result = build_tile_relations(boxes, 400, 300)
+    assert result.scale == pytest.approx(20.0)
+    assert result.tiles[0].center == pytest.approx((0.275, 0.4))
+    assert result.gaps[0, 1] == pytest.approx(0.5)
+    assert result.size_ratios[0, 2] == pytest.approx(0.5)
 
 
-def test_normalizer_maps_table_to_unit_square():
-    table = TableGeometry(np.asarray([[100, 600], [250, 100], [1000, 150], [1150, 620]], np.float32))
-    result = TableNormalizer().normalize([[250, 250, 100, 80]], table, 1280, 720)
-    assert result.homography.shape == (3, 3)
-    assert len(result.tiles) == 1
-    assert 0.0 <= result.tiles[0].center[0] <= 1.0
-    assert 0.0 <= result.tiles[0].center[1] <= 1.0
-    assert len(result.tiles[0].edge_distances) == 4
+def test_translation_scale_and_resolution_preserve_relations():
+    boxes = [[100, 100, 20, 40], [130, 100, 20, 40], [160, 100, 20, 40]]
+    scaled = [[x * 2 + 50, y * 2 + 30, w * 2, h * 2] for x, y, w, h in boxes]
+    a = build_tile_relations(boxes, 400, 300)
+    b = build_tile_relations(scaled, 850, 630)
+    np.testing.assert_allclose(a.gaps, b.gaps)
+    np.testing.assert_allclose(a.size_ratios, b.size_ratios)
+    np.testing.assert_allclose(a.axes_deg, b.axes_deg)
 
 
-def test_degenerate_table_is_rejected():
-    table = TableGeometry(np.asarray([[0, 0], [1, 0], [2, 0], [3, 0]], np.float32))
-    with pytest.raises(ValueError, match="degenerate"):
-        TableNormalizer().normalize([], table, 1280, 720)
-
-
-def test_projective_transform_preserves_normalized_tile_geometry():
-    source = TableGeometry.unit_square(1000, 1000)
-    normalizer = TableNormalizer()
-    original = normalizer.normalize([[400, 200, 100, 160]], source, 1000, 1000)
-    matrix = np.asarray([[1.0, 0.15, 120], [0.05, 0.9, 80], [0.0002, 0.0001, 1]], np.float32)
-    transformed_table = normalizer.transform_table(source, matrix)
-    transformed_boxes = normalizer.transform_boxes([[400, 200, 100, 160]], matrix)
-    warped = normalizer.normalize(transformed_boxes, transformed_table, 1400, 1000)
-    np.testing.assert_allclose(warped.tiles[0].center, original.tiles[0].center, atol=2e-2)
+def test_invalid_boxes_are_rejected():
+    with pytest.raises(ValueError, match="positive width and height"):
+        build_tile_relations([[1, 2, 0, 4]], 100, 100)
 ```
 
-- [ ] **Step 2: Run tests and verify missing implementation failure**
+- [ ] **Step 2: Verify missing module failure**
 
 ```powershell
-python -m pytest tests/test_table_geometry.py -q
+python -m pytest tests/test_tile_relations.py -q
 ```
 
-Expected: collection fails because `mahjong_rt.table_geometry` does not exist.
+Expected: collection FAIL with `ModuleNotFoundError`.
 
-- [ ] **Step 3: Implement deterministic homography and mapped tile geometry**
+- [ ] **Step 3: Implement immutable relation types**
 
-In `mahjong_rt/table_geometry.py`, define:
+Create:
 
 ```python
 @dataclass(frozen=True)
-class NormalizedTile:
-    corners: tuple[tuple[float, float], ...]
-    center: tuple[float, float]
-    width: float
-    height: float
-    angle_deg: float
-    edge_distances: tuple[float, float, float, float]  # left, top, right, bottom
+class TileFeature:
+    index: int
+    center: tuple[float, float]       # frame-normalized only for direction naming
+    size: tuple[float, float]         # width/scale, height/scale
+    short_ratio: float
+    aspect_ratio: float
 
 
 @dataclass(frozen=True)
-class NormalizationQuality:
-    quadrilateral_area_ratio: float
-    homography_condition: float
-    outside_tile_fraction: float
-    valid: bool
-    failures: tuple[str, ...]
-
-
-@dataclass(frozen=True)
-class NormalizedLayout:
-    tiles: tuple[NormalizedTile, ...]
-    homography: np.ndarray
-    quality: NormalizationQuality
-
-
-class TableNormalizer:
-    def __init__(self, max_condition: float = 1e6, min_area_ratio: float = 0.08) -> None: ...
-    def normalize(self, boxes, table: TableGeometry, frame_w: int, frame_h: int) -> NormalizedLayout: ...
-    def transform_table(self, table: TableGeometry, matrix: np.ndarray) -> TableGeometry: ...
-    def transform_boxes(self, boxes, matrix: np.ndarray) -> list[list[float]]: ...
+class TileRelations:
+    tiles: tuple[TileFeature, ...]
+    scale: float
+    center_distances: np.ndarray      # divided by image median short side
+    gaps: np.ndarray                  # minimum rectangle-edge gap / scale
+    axes_deg: np.ndarray              # undirected angle in [0, 180)
+    size_ratios: np.ndarray           # min(short_i, short_j)/max(...)
+    cross_offsets: np.ndarray         # perpendicular center offset / scale
 ```
 
-Use `cv2.getPerspectiveTransform` and `cv2.perspectiveTransform`. Map each `xywh` rectangle's four corners. Compute mapped width and height as opposite-edge means and compute orientation with `atan2`. Reject self-intersecting, near-zero-area, non-convex, or ill-conditioned table quadrilaterals. Keep all normalized coordinates in `[0, 1]` space; do not hard-code a pixel output size.
+`build_tile_relations(boxes, frame_w, frame_h)` must:
 
-- [ ] **Step 4: Add a deterministic corner annotation script**
+- validate positive frame dimensions and finite positive `xywh` boxes;
+- return an empty immutable result for no boxes;
+- use median short side as `scale`;
+- calculate symmetric matrices with zero diagonals;
+- copy arrays and call `setflags(write=False)`;
+- calculate rectangle-edge gap as `hypot(max(abs(dx)-(w_i+w_j)/2,0), max(abs(dy)-(h_i+h_j)/2,0)) / scale`;
+- avoid image- or camera-specific constants.
 
-Implement `scripts/annotate_table_corners.py` with this CLI:
+- [ ] **Step 4: Run focused tests**
 
 ```powershell
-python scripts/annotate_table_corners.py --labels ../output/zone_annotation/zone_labels_with_class.json --images ../output/zone_annotation/images
+python -m pytest tests/test_tile_relations.py -q
 ```
 
-Behavior:
+Expected: PASS.
 
-- Open each image with OpenCV.
-- Show any existing corners.
-- Collect exactly four clicks in order: left-bottom, left-top, right-top, right-bottom.
-- `R` resets the current image, `S` saves and advances, `Q` exits without modifying the current item.
-- Save atomically through a sibling `.tmp` file and `Path.replace`.
-- Modify only a `table_corners` field; preserve every existing field and list order.
-- Before saving, construct `TableGeometry` and call `TableNormalizer.normalize` to reject invalid corners.
-
-The saved field is:
-
-```json
-"table_corners": [[x_lb, y_lb], [x_lt, y_lt], [x_rt, y_rt], [x_rb, y_rb]]
-```
-
-- [ ] **Step 5: Write failing tests for five-zone schema and independent review**
-
-`tests/test_zone_label_review.py` must assert:
-
-- only `my_hand`, `seat_left`, `seat_across`, `seat_right`, and `river` are accepted in the canonical dataset;
-- the current five `opponent_wall` samples make validation fail before migration;
-- two review files are required and reviewers cannot share an ID;
-- a disagreement cannot be migrated automatically;
-- the audit records image, box index, old label, reviewer-A label, reviewer-B label, final label, and rationale;
-- boxes, classes, image order, and all unrelated fields are unchanged by migration.
-
-Run:
+- [ ] **Step 5: Commit**
 
 ```powershell
-python -m pytest tests/test_zone_label_review.py -q
-```
-
-Expected: collection fails because `scripts.review_zone_labels` does not exist.
-
-- [ ] **Step 6: Implement and perform independent double-review**
-
-Implement `scripts/review_zone_labels.py` with two separate phases:
-
-```powershell
-python scripts/review_zone_labels.py collect --labels ../output/zone_annotation/zone_labels_with_class.json --reviewer <reviewer-a> --output ../output/zone_annotation/review_a.json
-python scripts/review_zone_labels.py collect --labels ../output/zone_annotation/zone_labels_with_class.json --reviewer <reviewer-b> --output ../output/zone_annotation/review_b.json
-python scripts/review_zone_labels.py apply --labels ../output/zone_annotation/zone_labels_with_class.json --review-a ../output/zone_annotation/review_a.json --review-b ../output/zone_annotation/review_b.json --audit ../output/zone_annotation/zone_label_migration_audit.json
-```
-
-The collection UI must show every `opponent_wall` sample plus all samples explicitly marked ambiguous during review. Review B must not see review A's answer. `apply` may update a label only when both reviewers independently select the same canonical zone and provide a non-empty rationale. Disagreements abort without modifying the canonical file. The audit stores the input/output SHA-256 digests and every changed sample. Do not infer `opponent_wall → seat_across` automatically.
-
-- [ ] **Step 7: Annotate all 20 images and validate the data-readiness gate**
-
-Run the corner annotation and completed double-review workflow, then run:
-
-```powershell
-python -c "import json; p='../output/zone_annotation/zone_labels_with_class.json'; d=json.load(open(p,encoding='utf-8')); allowed={'my_hand','seat_left','seat_across','seat_right','river'}; assert len(d)==20 and all(len(x.get('table_corners',[]))==4 for x in d); assert all(z in allowed for x in d for z in x['zones']); assert sum(len(x['zones']) for x in d)==899; print('ready:',len(d),899)"
-```
-
-Expected: `ready: 20 899`. If reviewers cannot agree from static visual evidence, stop and revise the annotation contract; do not proceed to calibration.
-
-- [ ] **Step 8: Run geometry, review, and legacy regression tests**
-
-```powershell
-python -m pytest tests/test_table_geometry.py tests/test_zone_label_review.py tests/test_zones.py -q
-```
-
-Expected: all tests pass. The audit proves that corner annotation changed only `table_corners`, while label migration changed only independently agreed `zones` entries.
-
-- [ ] **Step 9: Commit normalized geometry and audited labels**
-
-```powershell
-git add mahjong_rt/table_geometry.py tests/test_table_geometry.py tests/test_zone_label_review.py scripts/annotate_table_corners.py scripts/review_zone_labels.py ../output/zone_annotation/zone_labels_with_class.json ../output/zone_annotation/zone_label_migration_audit.json
-git commit -m "feat(zones): prepare audited perspective-normalized data"
+git add mahjong_rt/tile_relations.py tests/test_tile_relations.py
+git commit -m "feat(zones): derive adaptive tile relations"
 ```
 
 ---
 
-### Task 3: Versioned calibration profiles
+### Task 3: Extract direction-constrained tile lines
 
 **Files:**
-- Create: `mahjong-rt/mahjong_rt/zone_calibration.py`
-- Create: `mahjong-rt/tests/test_zone_calibration.py`
-- Create: `mahjong-rt/scripts/calibrate_zones.py`
-- Create: `mahjong-rt/configs/zones/current_v1.json`
+- Create: `mahjong-rt/mahjong_rt/tile_lines.py`
+- Create: `mahjong-rt/tests/test_tile_lines.py`
 
-- [ ] **Step 1: Write failing profile tests**
+- [ ] **Step 1: Write failing row and anti-chaining tests**
 
 ```python
-import json
-
-import pytest
-
-from mahjong_rt.zone_calibration import CalibrationSample, ZoneCalibrator, ZoneProfile
+from mahjong_rt.tile_lines import LineExtractionConfig, extract_tile_lines
+from mahjong_rt.tile_relations import build_tile_relations
 
 
-def sample(image, center, zone):
-    return CalibrationSample(
-        image=image,
-        tile_index=0,
-        zone=zone,
-        center=center,
-        edge_distances=(center[0], center[1], 1-center[0], 1-center[1]),
-        size=(0.08, 0.12),
-        angle_deg=0.0,
-        nearest_neighbor=0.1,
-    )
+def line_boxes(points, size=(20, 30)):
+    return [[x, y, size[0], size[1]] for x, y in points]
 
 
-def test_profile_round_trip_is_stable(tmp_path):
-    profile = ZoneCalibrator().fit([
-        sample("a.jpg", (0.5, 0.9), "my_hand"),
-        sample("b.jpg", (0.1, 0.5), "seat_left"),
-        sample("c.jpg", (0.5, 0.1), "seat_across"),
-        sample("d.jpg", (0.9, 0.5), "seat_right"),
-        sample("e.jpg", (0.5, 0.5), "river"),
-    ], calibration_id="camera-a")
-    path = tmp_path / "profile.json"
-    profile.save(path)
-    assert ZoneProfile.load(path) == profile
+def test_extracts_horizontal_vertical_and_sloped_lines():
+    boxes = line_boxes([(20, 100), (45, 100), (70, 100)])
+    boxes += line_boxes([(200, 20), (200, 50), (200, 80)])
+    boxes += line_boxes([(300, 50), (325, 60), (350, 70)])
+    lines = extract_tile_lines(build_tile_relations(boxes, 500, 300))
+    assert {line.members for line in lines} >= {(0, 1, 2), (3, 4, 5), (6, 7, 8)}
 
 
-def test_unknown_schema_version_is_rejected(tmp_path):
-    path = tmp_path / "bad.json"
-    path.write_text(json.dumps({"schema_version": 999}), encoding="utf-8")
-    with pytest.raises(ValueError, match="schema_version"):
-        ZoneProfile.load(path)
+def test_bridge_does_not_single_link_two_lines():
+    boxes = line_boxes([(100, 50), (130, 50), (160, 50)])
+    boxes += line_boxes([(170, 75), (180, 100)])
+    boxes += line_boxes([(190, 130), (220, 130), (250, 130)])
+    lines = extract_tile_lines(build_tile_relations(boxes, 400, 240))
+    assert (0, 1, 2) in {line.members for line in lines}
+    assert (5, 6, 7) in {line.members for line in lines}
+    assert all(len(line.members) < 8 for line in lines)
 
 
-def test_fit_records_image_level_provenance():
-    profile = ZoneCalibrator().fit([
-        sample("a.jpg", (0.5, 0.9), "my_hand"),
-        sample("b.jpg", (0.2, 0.4), "seat_left"),
-        sample("c.jpg", (0.5, 0.1), "seat_across"),
-        sample("d.jpg", (0.8, 0.4), "seat_right"),
-        sample("e.jpg", (0.5, 0.5), "river"),
-    ], calibration_id="camera-a")
-    assert profile.calibration_images == ("a.jpg", "b.jpg", "c.jpg", "d.jpg", "e.jpg")
-    assert profile.calibration_digest
+def test_shuffled_input_preserves_geometric_membership():
+    boxes = line_boxes([(20, 100), (45, 100), (70, 100), (95, 100)])
+    order = [2, 0, 3, 1]
+    original = extract_tile_lines(build_tile_relations(boxes, 200, 160))
+    shuffled = extract_tile_lines(build_tile_relations([boxes[i] for i in order], 200, 160))
+    restored = {tuple(sorted(order[i] for i in row.members)) for row in shuffled}
+    assert tuple(sorted(original[0].members)) in restored
 ```
 
-- [ ] **Step 2: Verify the tests fail**
+- [ ] **Step 2: Verify missing module failure**
 
 ```powershell
-python -m pytest tests/test_zone_calibration.py -q
+python -m pytest tests/test_tile_lines.py -q
 ```
 
-Expected: import failure for `mahjong_rt.zone_calibration`.
+Expected: collection FAIL.
 
-- [ ] **Step 3: Implement profile fitting without test-set leakage**
-
-Define these public objects:
-
-```python
-@dataclass(frozen=True)
-class CalibrationSample:
-    image: str
-    tile_index: int
-    zone: str
-    center: tuple[float, float]
-    edge_distances: tuple[float, float, float, float]
-    size: tuple[float, float]
-    angle_deg: float
-    nearest_neighbor: float
-    orientation_probabilities: tuple[float, float, float, float] | None = None
-    orientation_margin: float | None = None
-
-    def __post_init__(self) -> None:
-        # Require a basename-only image ID, non-negative tile index, canonical zone,
-        # finite geometry, normalized coordinates/distances, positive size, and
-        # paired orientation fields. Reconstruct OrientationScore from probabilities
-        # and require orientation_margin to equal its computed margin.
-        ...
-
-
-@dataclass(frozen=True)
-class FeatureDistribution:
-    median: float
-    mad: float
-    low: float
-    high: float
-
-
-@dataclass(frozen=True)
-class ZonePrior:
-    center_x: FeatureDistribution
-    center_y: FeatureDistribution
-    edge_distance: FeatureDistribution
-    width: FeatureDistribution
-    height: FeatureDistribution
-    nearest_neighbor: FeatureDistribution
-    angle_deg: FeatureDistribution
-    orientation_probabilities: tuple[FeatureDistribution, FeatureDistribution, FeatureDistribution, FeatureDistribution] | None
-    orientation_margin: FeatureDistribution | None
-    core_polygon: tuple[tuple[float, float], ...]
-
-
-@dataclass(frozen=True)
-class ZoneProfile:
-    schema_version: int
-    calibration_id: str
-    calibration_images: tuple[str, ...]
-    calibration_digest: str
-    zones: Mapping[str, ZonePrior]
-    weights: Mapping[str, float]
-    solver: Mapping[str, float]
-    orientation_provenance: OrientationProvenance | None = None
-    def save(self, path: Path) -> None: ...
-    @classmethod
-    def load(cls, path: Path) -> "ZoneProfile": ...
-
-
-class ZoneCalibrator:
-    def fit(self, samples: Sequence[CalibrationSample], calibration_id: str) -> ZoneProfile: ...
-```
-
-Require at least one sample for each of the five canonical zones; fail instead of inventing priors for a missing zone. Use median, median absolute deviation with a `1e-4` floor, and 5th/95th percentiles. Build `core_polygon` with `cv2.convexHull`; for one or two samples use a clipped rectangle expanded by `0.02`. Compute a SHA-256 digest over sorted image names and serialized samples. Reject unknown zones and empty calibration IDs.
-
-Treat the profile JSON as a strict schema: require exactly the five canonical zone keys; reject missing or unknown top-level/nested fields, NaN/Infinity, invalid hashes, absent weight/solver keys, unknown keys, negative weights, and solver values outside declared ranges. Define exactly these weight keys and defaults/ranges: `center=1.0 [0,10]`, `edge=1.0 [0,10]`, `size=0.25 [0,10]`, `nearest_neighbor=0.5 [0,10]`, `angle=0.25 [0,10]`, `polygon=1.0 [0,10]`, `orientation=0.0 [0,10]`. Define exactly these solver keys and defaults/ranges: `mismatch_penalty=0.05 [0,2]`, `meld_multiplier=2.0 [1,4]`, `top_band=0.35 [0,1]`, `bottom_band=0.65 [0,1]`, `side_band=0.35 [0,1]`. Require `top_band < bottom_band`. Deep-freeze loaded `zones`, `weights`, and `solver` with `MappingProxyType`; every nested collection is a tuple or frozen dataclass. If any orientation prior exists, require all five zones to contain it and require matching `orientation_provenance`; otherwise require provenance to be `null`. Add tests for each rejection and for mutation attempts raising `TypeError`.
-
-- [ ] **Step 4: Implement an explicit-manifest calibration CLI**
-
-`calibrate_zones.py` accepts geometry-only calibration or an explicit orientation artifact:
-
-```powershell
-python scripts/calibrate_zones.py --labels ../output/zone_annotation/zone_labels_with_class.json --images z01.jpg,z02.jpg,z03.jpg --calibration-id current-v1 --output configs/zones/current_v1.json
-python scripts/calibrate_zones.py --labels ../output/zone_annotation/zone_labels_with_class.json --images z01.jpg,z02.jpg,z03.jpg --calibration-id current-v1 --orientation-scores ../output/orientation_scores_train.json --orientation-model ../output/cls_final_v2/best.onnx --preprocessing-version cls-v1 --scorer-version entropy-v1 --output configs/zones/current_v1.json
-```
-
-It must:
-
-1. Require an explicit comma-separated image allow-list.
-2. Reject duplicate/missing image names.
-3. Require `table_corners` on every selected image.
-4. Normalize all selected boxes with `TableNormalizer`.
-5. Derive nearest-neighbor distance in normalized coordinates.
-6. Fit and save the profile.
-7. When `--orientation-scores` is supplied, require exactly one score for every selected `(image, tile_index)`, reject scores from any unselected image, verify the artifact's model hash/preprocessing/scorer metadata against CLI inputs, and populate the sample orientation fields.
-8. Print only selected calibration image names, sample counts by zone, profile path, and digest.
-
-It must never accept a test manifest or infer “all remaining images.” Geometry-only mode must write `null` orientation priors/provenance.
-
-- [ ] **Step 5: Fit a development profile and verify serialization**
-
-Use an explicit image-level calibration split, initially odd-numbered images:
-
-```powershell
-python scripts/calibrate_zones.py --labels ../output/zone_annotation/zone_labels_with_class.json --images z01.jpg,z03.jpg,z05.jpg,z07.jpg,z09.jpg,z11.jpg,z13.jpg,z15.jpg,z17.jpg,z19.jpg --calibration-id current-v1 --output configs/zones/current_v1.json
-python -c "from mahjong_rt.zone_calibration import ZoneProfile; p=ZoneProfile.load('configs/zones/current_v1.json'); print(p.calibration_id, len(p.calibration_images))"
-```
-
-Expected: `current-v1 10`.
-
-- [ ] **Step 6: Run profile tests**
-
-```powershell
-python -m pytest tests/test_zone_calibration.py tests/test_table_geometry.py -q
-```
-
-Expected: all tests pass.
-
-- [ ] **Step 7: Commit calibration support**
-
-```powershell
-git add mahjong_rt/zone_calibration.py tests/test_zone_calibration.py scripts/calibrate_zones.py configs/zones/current_v1.json
-git commit -m "feat(zones): fit versioned calibration profiles"
-```
-
----
-
-### Task 4: Calibrated geometric scorer and strict facade
-
-**Files:**
-- Create: `mahjong-rt/mahjong_rt/zone_solver.py`
-- Create: `mahjong-rt/tests/test_zone_solver.py`
-- Modify: `mahjong-rt/mahjong_rt/zones.py`
-- Modify: `mahjong-rt/tests/test_zones.py`
-
-- [ ] **Step 1: Write failing unary-cost and compatibility tests**
-
-```python
-from pathlib import Path
-
-from mahjong_rt.events import Zone
-from mahjong_rt.zone_calibration import ZoneProfile
-from mahjong_rt.zone_solver import StructuredZoneSolver
-from mahjong_rt.zone_types import TableGeometry, ZoneAnalysisContext
-from mahjong_rt.zones import ZoneConfig, analyze_layout
-
-
-def test_solver_prefers_nearest_calibrated_zone():
-    profile = ZoneProfile.load(Path("configs/zones/current_v1.json"))
-    solver = StructuredZoneSolver(profile)
-    costs, evidence = solver.unary_costs(center=(0.5, 0.05), edge_distances=(0.5, 0.05, 0.5, 0.95), size=(0.05, 0.08), angle_deg=0.0, nearest_neighbor=0.1, orientation=None)
-    assert min(costs, key=costs.get) == Zone.SEAT_ACROSS.value
-    assert evidence[Zone.SEAT_ACROSS.value]
-
-
-def test_legacy_call_stays_byte_for_byte_compatible():
-    boxes = [[600, 600, 100, 100], [500, 300, 30, 30]]
-    before = analyze_layout(boxes, 1280, 720, ZoneConfig())
-    after = analyze_layout(boxes, 1280, 720, ZoneConfig(), context=None, profile=None)
-    assert after == before
-
-
-def test_strict_call_requires_profile():
-    context = ZoneAnalysisContext(table=TableGeometry.unit_square(1280, 720))
-    try:
-        analyze_layout([[500, 300, 30, 30]], 1280, 720, ZoneConfig(mode="structured"), context=context)
-    except ValueError as exc:
-        assert "profile" in str(exc)
-    else:
-        raise AssertionError("strict structured mode accepted a missing profile")
-```
-
-- [ ] **Step 2: Verify focused tests fail**
-
-```powershell
-python -m pytest tests/test_zone_solver.py tests/test_zones.py -q
-```
-
-Expected: `StructuredZoneSolver` is missing and `ZoneConfig` does not accept `mode`.
-
-- [ ] **Step 3: Implement deterministic unary costs and diagnostics**
-
-`StructuredZoneSolver.unary_costs` must compute robust normalized distances against each `ZonePrior`:
-
-```python
-def robust_distance(value: float, distribution: FeatureDistribution) -> float:
-    scale = max(distribution.mad * 1.4826, 1e-4)
-    return min(abs(value - distribution.median) / scale, 12.0)
-```
-
-For each zone, combine profile weights for center, relevant table edge, size, nearest-neighbor, angle, and—when calibrated in Task 5—the distance between the observed four-way `OrientationScore.probabilities`/`margin` and that zone's orientation distributions. Add a polygon penalty of zero inside the core polygon and the Euclidean distance to its nearest edge outside. Return a per-zone evidence list naming the three smallest contributing terms. Before Task 5 populates orientation priors, orientation cost is exactly zero.
-
-`solve_unary(layout, orientation_batch=None)` returns zones and one `TileZoneDiagnostic` per tile. Sort equal costs by this fixed order to guarantee determinism:
-
-```python
-ZONE_ORDER = ("my_hand", "seat_left", "seat_across", "seat_right", "river")
-```
-
-- [ ] **Step 4: Extend `zones.py` without breaking existing callers**
-
-Extend `ZoneConfig` with:
-
-```python
-mode: str = "legacy"  # legacy | structured
-strict_failure: bool = True
-min_margin: float = 0.0
-```
-
-Change signatures to:
-
-```python
-def analyze_layout(
-    boxes,
-    frame_w,
-    frame_h,
-    config,
-    *,
-    context: ZoneAnalysisContext | None = None,
-    profile: ZoneProfile | None = None,
-) -> tuple[list[str], dict]: ...
-
-
-def assign_zones(
-    boxes,
-    frame_w,
-    frame_h,
-    config,
-    *,
-    context: ZoneAnalysisContext | None = None,
-    profile: ZoneProfile | None = None,
-) -> list[str]: ...
-```
-
-Rules:
-
-- `mode="legacy"` executes the existing implementation unchanged.
-- `mode="structured"` requires `context` and `profile`.
-- Validate context length before normalization.
-- Normalization failure raises `ValueError` when `strict_failure=True`; otherwise return `unknown_zone` and diagnostics.
-- Structured debug output contains `mode`, normalization quality, profile digest, and serialized per-tile diagnostics.
-- Do not modify `events.py`.
-
-- [ ] **Step 5: Run focused and full unit tests**
-
-```powershell
-python -m pytest tests/test_zone_solver.py tests/test_zones.py tests/test_table_geometry.py tests/test_zone_calibration.py -q
-python -m pytest tests/ -q
-```
-
-Expected: all tests pass and existing legacy assertions are unchanged.
-
-- [ ] **Step 6: Commit calibrated geometric classification**
-
-```powershell
-git add mahjong_rt/zone_solver.py mahjong_rt/zones.py tests/test_zone_solver.py tests/test_zones.py
-git commit -m "feat(zones): add calibrated geometric solver"
-```
-
----
-
-### Task 5: Measure and expose four-rotation orientation evidence
-
-**Files:**
-- Create: `mahjong-rt/mahjong_rt/tile_orientation.py`
-- Create: `mahjong-rt/tests/test_tile_orientation.py`
-- Create: `mahjong-rt/scripts/eval_zone_orientation.py`
-- Modify: `mahjong-rt/mahjong_rt/pipeline.py`
-- Modify: `mahjong-rt/mahjong_rt/zone_calibration.py`
-- Modify: `mahjong-rt/scripts/calibrate_zones.py`
-- Modify: `mahjong-rt/configs/zones/current_v1.json`
-
-- [ ] **Step 1: Write failing orientation tests with a fake classifier**
-
-```python
-import numpy as np
-
-from mahjong_rt.tile_orientation import TileOrientationEstimator
-
-
-class FakeClassifier:
-    def predict_probabilities(self, patches):
-        rows = []
-        for patch in patches:
-            marker = int(patch[0, 0, 0])
-            rows.append([0.9, 0.1] if marker == 7 else [0.55, 0.45])
-        return np.asarray(rows, np.float32)
-
-
-def test_estimator_batches_four_rotations_per_crop():
-    crop = np.zeros((8, 12, 3), np.uint8)
-    crop[0, 0, 0] = 7
-    estimator = TileOrientationEstimator(FakeClassifier(), OrientationProvenance("a" * 64, "test", "entropy-v1"))
-    result = estimator.score([crop])
-    assert len(result.scores) == 1
-    assert result.scores[0].best_rotation == 0
-    assert result.scores[0].margin > 0
-    assert result.provenance == estimator.provenance
-
-
-def test_empty_crops_return_empty_scores():
-    estimator = TileOrientationEstimator(FakeClassifier(), OrientationProvenance("a" * 64, "test", "entropy-v1"))
-    assert estimator.score([]).scores == ()
-```
-
-- [ ] **Step 2: Verify tests fail**
-
-```powershell
-python -m pytest tests/test_tile_orientation.py -q
-```
-
-Expected: import failure for `mahjong_rt.tile_orientation`.
-
-- [ ] **Step 3: Implement a reusable probability adapter and orientation scorer**
-
-Define:
-
-```python
-class ProbabilityClassifier(Protocol):
-    def predict_probabilities(self, patches: Sequence[np.ndarray]) -> np.ndarray: ...
-
-
-class TileOrientationEstimator:
-    def __init__(self, classifier: ProbabilityClassifier, provenance: OrientationProvenance) -> None: ...
-    @property
-    def provenance(self) -> OrientationProvenance: ...
-    def score(self, crops: Sequence[np.ndarray]) -> OrientationBatch: ...
-```
-
-For each crop, generate rotations with `np.rot90(crop, k)` for `k=0..3`. Batch all rotations in one classifier call. For each rotation compute:
-
-```python
-rotation_score = log(max_class_probability + 1e-8) - normalized_entropy(probabilities)
-```
-
-Convert the four entropy-adjusted logits with `OrientationScore.from_logits`, wrap all scores in `OrientationBatch`, and copy the estimator's immutable provenance into the result. Keep orientation independent from the predicted tile class. `StructuredZoneSolver` must reject a non-null batch unless its provenance exactly equals `ZoneProfile.orientation_provenance`; add focused tests for mismatched model hash, preprocessing version, and scorer version.
-
-Extract the ONNX preprocessing and probability computation currently in `Pipeline._classify` into a private adapter implementing `predict_probabilities`; keep `_classify` output identical by constructing `Observation` from those probabilities.
-
-- [ ] **Step 4: Implement orientation signal evaluation before enabling its weight**
-
-`eval_zone_orientation.py` loads images, GT boxes/classes/zones, and classifier weights. It writes a reusable `--scores-output` artifact with `schema_version=1`, `labels_sha256`, `boxes_sha256`, `model_sha256`, `training_images` as a sorted basename-only list and `training_manifest_sha256` over its canonical newline-joined UTF-8 bytes (both required when orientation is used for an OOF claim), `preprocessing_version`, `scorer_version`, and a `records` list. Each record contains basename-only `image`, non-negative `tile_index`, the canonicalized source `xywh` rounded to six decimals as `box_identity`, four normalized finite `probabilities`, and computed `margin`. Records are sorted by `(image, tile_index)`; duplicates, missing selected boxes, extra boxes, digest mismatch, unknown fields, or non-canonical JSON are rejected. Canonical serialization is UTF-8 JSON with sorted keys, compact separators, and `allow_nan=False`. It reports:
-
-- best rotation distribution per zone;
-- median orientation margin per zone;
-- four-class orientation consistency within each stable player row;
-- `seat_across` versus `river` binary AUC for each rotation score;
-- image-level five-fold performance of geometry-only versus geometry-plus-orientation, fitting the orientation weight on training folds only.
-
-Run:
-
-```powershell
-python scripts/eval_zone_orientation.py --labels ../output/zone_annotation/zone_labels_with_class.json --images ../output/zone_annotation/images --weights ../output/cls_final_v2/best.onnx --profile configs/zones/current_v1.json --scores-output ../output/orientation_scores_all.json --output ../output/zone_orientation_report.json
-```
-
-Acceptance rule: for each CV fold, filter the score artifact to that fold's training images, call `ZoneCalibrator.fit` with those orientation samples, and evaluate only the held-out images. Set the default orientation weight above zero only if held-out image-level CV improves and `seat_across` recall does not regress. After acceptance, regenerate the declared development profile with `calibrate_zones.py --orientation-scores ...`; its `ZonePrior` entries must contain four probability distributions and an orientation-margin distribution, and runtime must reject an estimator whose model hash/preprocessing/scorer versions differ from profile provenance. Otherwise keep those fields/provenance `null`, retain weight `0.0`, and record that the existing classifier does not provide a reliable new signal; do not tune on the final test split.
-
-- [ ] **Step 5: Run orientation and pipeline regression tests**
-
-```powershell
-python -m pytest tests/test_tile_orientation.py tests/test_zone_solver.py tests/test_zones.py -q
-python -m pytest tests/ -q
-```
-
-Expected: all tests pass; `_classify` still produces the same labels/confidences for a fixed probability matrix.
-
-- [ ] **Step 6: Commit orientation evidence support**
-
-```powershell
-git add mahjong_rt/tile_orientation.py mahjong_rt/pipeline.py mahjong_rt/zone_calibration.py tests/test_tile_orientation.py scripts/eval_zone_orientation.py scripts/calibrate_zones.py configs/zones/current_v1.json
-git commit -m "feat(zones): calibrate tile orientation evidence"
-```
-
----
-
-### Task 6: Constrained layout graph without single-link chaining
-
-**Files:**
-- Create: `mahjong-rt/mahjong_rt/layout_graph.py`
-- Create: `mahjong-rt/tests/test_layout_graph.py`
-
-- [ ] **Step 1: Write failing anti-chaining and meld tests**
-
-```python
-from mahjong_rt.layout_graph import LayoutGraphBuilder
-from mahjong_rt.table_geometry import NormalizedTile
-
-
-def tile(x, y, angle=0.0):
-    return NormalizedTile(
-        corners=((x-.02,y-.03),(x+.02,y-.03),(x+.02,y+.03),(x-.02,y+.03)),
-        center=(x, y), width=.04, height=.06, angle_deg=angle,
-        edge_distances=(x, y, 1-x, 1-y),
-    )
-
-
-def test_bridge_tiles_do_not_chain_across_group_into_river():
-    across = [tile(.40, .12), tile(.46, .12), tile(.52, .12)]
-    bridge = [tile(.55, .18), tile(.58, .24), tile(.61, .30)]
-    groups = LayoutGraphBuilder(max_group_span=.22).build(across + bridge)
-    assert max(len(group.members) for group in groups) < 6
-    assert any(group.members == (0, 1, 2) for group in groups)
-
-
-def test_three_equal_classes_form_meld_candidate():
-    groups = LayoutGraphBuilder().build(
-        [tile(.3,.2), tile(.35,.2), tile(.4,.2)],
-        classes=("w1", "w1", "w1"),
-    )
-    assert any(group.kind == "meld" and group.members == (0,1,2) for group in groups)
-```
-
-- [ ] **Step 2: Verify tests fail**
-
-```powershell
-python -m pytest tests/test_layout_graph.py -q
-```
-
-Expected: import failure for `mahjong_rt.layout_graph`.
-
-- [ ] **Step 3: Implement constrained adjacency and maximal groups**
+- [ ] **Step 3: Implement deterministic row extraction**
 
 Define:
 
 ```python
 @dataclass(frozen=True)
-class TileGroup:
+class TileLine:
     members: tuple[int, ...]
-    kind: str  # row | column | meld
     axis_deg: float
-    span: float
-    consistency: float
     centroid: tuple[float, float]
+    span: float
+    median_gap: float
+    gap_cv: float
+    fit_error: float
+    size_consistency: float
 
 
-class LayoutGraphBuilder:
-    def __init__(self, max_gap=0.09, max_angle_diff=18.0, max_size_ratio=1.8, max_group_span=0.35): ...
-    def build(self, tiles, classes=None, orientations=None) -> tuple[TileGroup, ...]: ...
+@dataclass(frozen=True)
+class LineExtractionConfig:
+    max_gap_iqr_factor: float = 1.5
+    max_cross_offset_ratio: float = 0.55
+    min_size_similarity: float = 0.60
+    max_fit_error_ratio: float = 0.45
+    min_members: int = 2
 ```
 
-Create candidate edges only when gap, orientation, size ratio, and projected row/column offset all pass. Grow a group only while:
+Algorithm:
 
-- total span remains below `max_group_span`;
-- every new node is compatible with the group's fitted axis;
-- no internal projected gap exceeds `max_gap`;
-- median size ratio remains below `max_size_ratio`.
+1. A pair is initially compatible when `size_ratio >= min_size_similarity`. For every tile, select the compatible neighbor with the smallest rectangle-edge gap; ties use neighbor index. Collect those finite nearest gaps as `G`.
+2. Let `Q1,Q3` use NumPy's linear percentile and `IQR=Q3-Q1`. The candidate gap limit is `Q3 + max_gap_iqr_factor*IQR`. If `len(G)<4` or `IQR=0`, use `max(G)`; if `G` is empty, emit only singleton handling downstream and no line seeds. All gaps are already divided by the image median short side.
+3. Keep compatible pairs whose rectangle-edge gap is at most that limit and sort seeds by `(gap,min_index,max_index)`.
+4. Grow in both projected directions along the seed axis. For candidate tile `j`, project each oriented rectangle onto the current unit row axis. The projected gap is the non-negative distance between the candidate interval and the nearest terminal member's interval; it is not center distance.
+5. Compute accepted row projected gaps plus the candidate gap. The candidate gap limit uses the same `Q3 + max_gap_iqr_factor*IQR` formula; with fewer than four samples or zero IQR, use `max(existing_gaps)`, and for the first growth step use the global candidate gap limit from step 2.
+6. Accept only when size similarity passes, perpendicular centroid residual divided by the row's median normalized short size is at most `max_cross_offset_ratio`, candidate projected gap is within the row limit, and refitting does not violate the safeguards below.
+7. Refit the row axis with the first principal component after each accepted tile. Orient its sign lexicographically from the smaller endpoint center toward the larger; equal eigenvalues retain the prior seed axis.
+8. Define fit error as maximum perpendicular centroid residual divided by median normalized short size. Define gap coefficient of variation as population standard deviation divided by `max(mean_gap,1e-9)`, with zero for fewer than two gaps. Reject growth when fit error exceeds `max_fit_error_ratio` or gap CV exceeds `max_gap_iqr_factor`; this reuses an existing dimensionless safeguard instead of adding a camera parameter.
+9. Deduplicate identical member sets, remove strict subsets with no lower fit error, and sort by `(-member_count,members)`.
 
-Enumerate seeds deterministically by tile index and sort final groups by `(-len(members), members)`. Mark 3–4 equal-class aligned groups as `meld`. Do not merge connected components solely because a bridge edge exists.
+- [ ] **Step 4: Add mild-affine invariance test**
 
-- [ ] **Step 4: Add invariance tests under input-preserving transforms**
+Apply `x'=1.15x+0.08y+20`, `y'=0.05x+0.9y+10` to box centers while preserving positive sizes. Assert the same dominant member sets; this matches the directional-stability premise and does not claim arbitrary projective invariance.
 
-Add tests that translate/scale all normalized tile geometry and assert identical group membership. Add a shuffled-input test that maps indices back to the original order and asserts identical groups.
-
-- [ ] **Step 5: Run graph and geometry tests**
+- [ ] **Step 5: Run tests**
 
 ```powershell
-python -m pytest tests/test_layout_graph.py tests/test_table_geometry.py -q
+python -m pytest tests/test_tile_lines.py tests/test_tile_relations.py -q
 ```
 
-Expected: all tests pass, including the explicit six-tile bridge case.
+Expected: PASS.
 
-- [ ] **Step 6: Commit constrained grouping**
+- [ ] **Step 6: Commit**
 
 ```powershell
-git add mahjong_rt/layout_graph.py tests/test_layout_graph.py
-git commit -m "feat(zones): build constrained tile layout groups"
+git add mahjong_rt/tile_lines.py tests/test_tile_lines.py
+git commit -m "feat(zones): extract constrained tile lines"
 ```
 
 ---
 
-### Task 7: Deterministic structured global solver
+### Task 4: Build hand, meld, river-block, and singleton groups
 
 **Files:**
-- Modify: `mahjong-rt/mahjong_rt/zone_solver.py`
-- Modify: `mahjong-rt/mahjong_rt/zones.py`
-- Modify: `mahjong-rt/tests/test_zone_solver.py`
-- Create: `mahjong-rt/tests/test_zone_pipeline.py`
+- Create: `mahjong-rt/mahjong_rt/layout_groups.py`
+- Create: `mahjong-rt/tests/test_layout_groups.py`
 
-- [ ] **Step 1: Write failing group-consistency and margin tests**
+- [ ] **Step 1: Write failing semantic-group tests**
 
 ```python
-from mahjong_rt.layout_graph import TileGroup
-from mahjong_rt.zone_solver import StructuredZoneSolver
+from mahjong_rt.layout_groups import build_layout_groups
+from mahjong_rt.tile_lines import extract_tile_lines
+from mahjong_rt.tile_relations import build_tile_relations
 
 
-def test_group_consistency_rescues_one_boundary_tile(profile, normalized_layout):
-    solver = StructuredZoneSolver(profile)
-    unary = [
-        {"seat_across": .1, "river": .8},
-        {"seat_across": .2, "river": .7},
-        {"seat_across": .55, "river": .50},
-    ]
-    result = solver.solve_costs(unary, (TileGroup((0,1,2), "row", 0.0, .15, .95, (.5, .1)),))
+def build(boxes, classes=None):
+    relations = build_tile_relations(boxes, 800, 600)
+    return build_layout_groups(relations, extract_tile_lines(relations), classes)
+
+
+def test_long_regular_line_is_hand_candidate():
+    boxes = [[100 + i * 28, 500, 22, 34] for i in range(9)]
+    groups = build(boxes)
+    assert any(g.kind == "hand" and len(g.members) == 9 for g in groups)
+
+
+def test_three_equal_tiles_raise_meld_evidence_without_being_required():
+    boxes = [[100 + i * 25, 200, 22, 34] for i in range(3)]
+    equal = build(boxes, ("w1", "w1", "w1"))
+    unknown = build(boxes, None)
+    assert any(g.kind == "meld" and g.class_evidence for g in equal)
+    assert any(g.kind == "meld" for g in unknown)
+
+
+def test_multiple_short_parallel_lines_form_disjoint_river_candidates():
+    boxes = []
+    for y in (220, 260, 300):
+        boxes += [[300 + i * 28, y, 22, 34] for i in range(4)]
+    groups = build(boxes)
+    river_members = {m for g in groups if g.kind in {"river_block", "row"} for m in g.members}
+    assert river_members == set(range(12))
+    assert any(g.kind == "river_block" and len(g.members) == 8 for g in groups)
+
+
+def test_unclaimed_tile_becomes_singleton():
+    groups = build([[100, 100, 20, 30]])
+    assert groups[0].kind == "singleton"
+    assert groups[0].members == (0,)
+```
+
+- [ ] **Step 2: Verify missing module failure**
+
+```powershell
+python -m pytest tests/test_layout_groups.py -q
+```
+
+Expected: collection FAIL.
+
+- [ ] **Step 3: Implement group contracts and deterministic precedence**
+
+```python
+@dataclass(frozen=True)
+class LayoutGroup:
+    group_id: int
+    members: tuple[int, ...]
+    kind: str  # hand | meld | river_block | row | singleton
+    centroid: tuple[float, float]
+    axis_deg: float | None
+    radial_span: float
+    regularity: float
+    class_evidence: bool
+    source_lines: tuple[int, ...]
+```
+
+`build_layout_groups(relations, lines, classes=None)` produces a **disjoint partition**, preventing combinatorial exact-cover search:
+
+1. Compute normalized line features in `[0,1]`: `L` and `S` use empirical CDF rank `(count(value ≤ x)-1)/max(1,n-1)`, so ties receive the same upper rank; regularity is `R = max(0, 1-(min(1,gap_cv)+min(1,fit_error))/2)`.
+2. A line's hand score is `H = (L + R + S) / 3`. Process lines by descending `(H, member_count, R)` and then ascending `members`; accept a hand candidate when `H` is at or above the median candidate score and it has at least five members. The five-member floor is a Mahjong structural safeguard, not a camera parameter.
+3. From still-unclaimed tiles, process 3–4 member lines by descending `(R, member_count)` then ascending `members` and accept them as `meld`. Three/four equal optional classes set `class_evidence=True` but classes never gate creation.
+4. From remaining disjoint short rows, evaluate all row pairs. For a pair, use their mean unit axis; `parallel_gap` is the non-negative gap between their projected intervals, `orthogonal_gap` is centroid separation on the perpendicular axis, and `row_gap_ratio = orthogonal_gap / max(median within-row projected gap, 1e-9)`. Axis eligibility uses the upper Tukey fence of all pairwise axis differences; gap eligibility uses the upper Tukey fence of all row-gap ratios. With fewer than four samples or zero IQR, use the observed maximum as the fence. Projected intervals must overlap by a positive amount.
+5. Sort eligible row pairs by descending `B = mean(R) + min(1, orthogonal_span/max(parallel_span,1e-9))`, then ascending member union. Greedily create a two-row river block only when neither row was consumed and `B > mean(R)`. Additional rows are not incrementally appended; three-row blocks emerge later as separate adjacent river groups with the same final zone. This prevents ambiguous overlapping block enumeration.
+6. Remaining valid disjoint lines become `row`; unclaimed tiles become `singleton`.
+7. At every earlier overlap, keep the candidate with larger `(H, member_count, R)`; exact ties keep lexicographically smaller `members`. Remove claimed members before the next candidate.
+8. Every tile belongs to exactly one output group; each group has sorted unique members and deterministic ordering.
+
+This deterministic partition intentionally gives up overlapping hypotheses in exchange for bounded runtime and clear failure ownership. Erroneous early grouping is exposed as a row/group test failure rather than hidden inside a combinatorial solver.
+
+- [ ] **Step 4: Add coverage and no-mutation tests**
+
+Assert every input tile appears in at least one group, inputs remain unchanged, and optional classes must match box count.
+
+- [ ] **Step 5: Run tests**
+
+```powershell
+python -m pytest tests/test_layout_groups.py tests/test_tile_lines.py -q
+```
+
+Expected: PASS.
+
+- [ ] **Step 6: Commit**
+
+```powershell
+git add mahjong_rt/layout_groups.py tests/test_layout_groups.py
+git commit -m "feat(zones): classify adaptive layout groups"
+```
+
+---
+
+### Task 5: Infer robust center and directional player anchors
+
+**Files:**
+- Create: `mahjong-rt/mahjong_rt/layout_anchors.py`
+- Create: `mahjong-rt/tests/test_layout_anchors.py`
+
+- [ ] **Step 1: Write failing center, direction, and missing-seat tests**
+
+```python
+from mahjong_rt.layout_anchors import infer_layout_anchors
+from mahjong_rt.layout_groups import LayoutGroup
+
+
+def group(i, kind, x, y, n=5, regularity=.9):
+    return LayoutGroup(i, tuple(range(i * 20, i * 20 + n)), kind, (x, y), 0.0,
+                       .2, regularity, False, ())
+
+
+def test_group_center_is_not_weighted_by_tile_count():
+    groups = (
+        group(0, "hand", .5, .9, 14), group(1, "hand", .1, .5, 4),
+        group(2, "hand", .5, .1, 4), group(3, "hand", .9, .5, 4),
+        group(4, "river_block", .5, .5, 12),
+    )
+    result = infer_layout_anchors(groups)
+    assert result.center == pytest.approx((.5, .5), abs=.05)
+
+
+def test_anchor_directions_map_to_fixed_seats():
+    groups = (
+        group(0, "hand", .5, .9), group(1, "hand", .1, .5),
+        group(2, "hand", .5, .1), group(3, "hand", .9, .5),
+    )
+    result = infer_layout_anchors(groups)
+    assert result.by_zone["my_hand"] == 0
+    assert result.by_zone["seat_left"] == 1
+    assert result.by_zone["seat_across"] == 2
+    assert result.by_zone["seat_right"] == 3
+
+
+def test_missing_across_anchor_is_not_invented():
+    groups = (group(0, "hand", .5, .9), group(1, "hand", .1, .5), group(2, "hand", .9, .5))
+    result = infer_layout_anchors(groups)
+    assert "seat_across" not in result.by_zone
+    assert "missing_seat_across_anchor" in result.failures
+```
+
+- [ ] **Step 2: Verify missing module failure**
+
+```powershell
+python -m pytest tests/test_layout_anchors.py -q
+```
+
+Expected: collection FAIL.
+
+- [ ] **Step 3: Implement unweighted robust center and anchor ranking**
+
+```python
+@dataclass(frozen=True)
+class AnchorResult:
+    center: tuple[float, float]
+    by_zone: Mapping[str, int]
+    radial_ranks: Mapping[int, float]
+    inside_scores: Mapping[int, float]
+    failures: tuple[str, ...]
+```
+
+Implementation requirements:
+
+- Task 4 supplies a disjoint partition, so each non-singleton group contributes one centroid exactly once regardless of tile count; singletons are excluded from center estimation when any non-singleton exists.
+- Use coordinate medians for the initial center and iterate the Weiszfeld geometric median to tolerance `1e-9` or 64 iterations with an epsilon guard.
+- Normalize radius to empirical-CDF rank `r∈[0,1]`, regularity to `q∈[0,1]`, and outer-hull membership to `h∈{0,1}`. Compute the outer hull with monotonic chain on group centroids; collinear boundary points count as hull points. For fewer than three unique centroids, every unique point is on the hull. Use exact normalized coordinates and lexicographic group-ID tie-breaking, with no pixel tolerance.
+- Score anchor candidates only from `hand`, `meld`, and `row`; never select `river_block` or `singleton` as an anchor.
+- Match at most one anchor to each fixed direction vector: bottom `(0,1)`, left `(-1,0)`, top `(0,-1)`, right `(1,0)`.
+- For candidate `g` and direction `d`, define direction alignment `a=max(0,dot(unit(g-center),d))` and anchor score `A=(2a+r+q+h)/5`. Candidate-direction pairs with `a < median positive alignment for that direction` are ineligible. This threshold is derived from the current image.
+- Exhaustively assign at most four directions over at most the top four eligible candidates per direction. Each group may serve at most one direction. Missing direction contributes zero and is preferred over any ineligible candidate. Maximize summed `A`, tie-breaking by direction order and group ID. This search is bounded by `5^4=625` states.
+- Build mappings with `MappingProxyType`.
+- For anchor `p` and layout center `c`, define its inward half-plane as `{x | dot(x-p, c-p) >= 0}`; boundary points are inside. For each group centroid `x`, start with observation `1-r`, append `1` or `0` for every available anchor half-plane, and set `inside_score` to their arithmetic mean. Missing anchors add no boundary and no invented evidence.
+
+- [ ] **Step 4: Add translation/scale and candidate-order invariance tests**
+
+Assert unchanged anchor group identities after uniform frame transforms and after shuffling candidate group order.
+
+- [ ] **Step 5: Run tests**
+
+```powershell
+python -m pytest tests/test_layout_anchors.py tests/test_layout_groups.py -q
+```
+
+Expected: PASS.
+
+- [ ] **Step 6: Commit**
+
+```powershell
+git add mahjong_rt/layout_anchors.py tests/test_layout_anchors.py
+git commit -m "feat(zones): infer adaptive player anchors"
+```
+
+---
+
+### Task 6: Solve group labels and attach singletons globally
+
+**Files:**
+- Create: `mahjong-rt/mahjong_rt/adaptive_zone_solver.py`
+- Create: `mahjong-rt/tests/test_adaptive_zone_solver.py`
+
+- [ ] **Step 1: Write failing group consistency and ambiguity tests**
+
+```python
+from mahjong_rt.adaptive_zone_solver import AdaptiveZoneSolver, GroupCandidateCost
+
+
+def test_group_assignment_keeps_boundary_tile_with_row():
+    costs = (
+        GroupCandidateCost(0, (0, 1, 2), "row", {
+            "seat_across": .20, "river": .55, "my_hand": 9, "seat_left": 9, "seat_right": 9,
+        }),
+    )
+    result = AdaptiveZoneSolver().solve(3, costs)
     assert result.zones == ("seat_across", "seat_across", "seat_across")
 
 
-def test_river_group_is_not_forced_to_one_player_zone(profile):
-    solver = StructuredZoneSolver(profile)
-    unary = [
-        {"seat_across": .45, "river": .10},
-        {"seat_across": .10, "river": .45},
-    ]
-    result = solver.solve_costs(unary, ())
-    assert result.zones == ("river", "seat_across")
+def test_partitioned_groups_choose_their_lowest_cost_labels():
+    costs = (
+        GroupCandidateCost(0, (0, 1, 2), "hand", {
+            "seat_across": .25, "river": 1.2, "my_hand": 9, "seat_left": 9, "seat_right": 9,
+        }),
+        GroupCandidateCost(1, (3, 4, 5), "river_block", {
+            "river": .30, "seat_across": 1.4, "my_hand": 9, "seat_left": 9, "seat_right": 9,
+        }),
+    )
+    result = AdaptiveZoneSolver().solve(6, costs)
+    assert result.zones[:3] == ("seat_across",) * 3
+    assert result.zones[3:] == ("river",) * 3
 
 
-def test_diagnostics_report_best_second_and_margin(profile):
-    result = StructuredZoneSolver(profile).solve_costs([{"river": .2, "seat_across": .6}], ())
-    diagnostic = result.diagnostics[0]
-    assert diagnostic.best_cost == .2
-    assert diagnostic.second_cost == .6
-    assert diagnostic.margin == .4
+def test_solver_reports_best_second_margin_and_reason():
+    result = AdaptiveZoneSolver().solve(1, (
+        GroupCandidateCost(0, (0,), "singleton", {
+            "river": .2, "seat_across": .6, "my_hand": 1, "seat_left": 1, "seat_right": 1,
+        }),
+    ))
+    d = result.diagnostics[0]
+    assert d.best_cost == .2
+    assert d.second_cost == .6
+    assert d.margin == .4
+    assert d.evidence
 ```
 
-Fixtures load a temporary minimal `ZoneProfile`; they must not depend on the generated repository profile.
-
-- [ ] **Step 2: Verify the structured tests fail**
+- [ ] **Step 2: Verify missing module failure**
 
 ```powershell
-python -m pytest tests/test_zone_solver.py -q
+python -m pytest tests/test_adaptive_zone_solver.py -q
 ```
 
-Expected: `solve_costs` or the expected structured result type is missing.
+Expected: collection FAIL.
 
-- [ ] **Step 3: Implement exact group-label enumeration**
-
-Define:
+- [ ] **Step 3: Implement cost and result contracts**
 
 ```python
+ZONE_ORDER = ("my_hand", "seat_left", "seat_across", "seat_right", "river")
+
 @dataclass(frozen=True)
-class StructuredSolveResult:
+class GroupCandidateCost:
+    group_id: int
+    members: tuple[int, ...]
+    kind: str
+    costs: Mapping[str, float]
+    evidence: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
+
+@dataclass(frozen=True)
+class AdaptiveSolveResult:
     zones: tuple[str, ...]
     diagnostics: tuple[TileZoneDiagnostic, ...]
+    selected_group_by_tile: tuple[int, ...]
     total_cost: float
 ```
 
-For each non-overlapping candidate group, enumerate all five labels per member (at most \(5^4=625\) assignments for a four-tile group) and minimize unary plus a split penalty. Missing zone keys in synthetic/test unary dictionaries have cost `math.inf`; production unary dictionaries must contain exactly all five canonical zones. Store `mismatch_penalty=0.05` in the required solver schema with an allowed range `[0.0, 2.0]`, and construct the boundary-rescue fixture with that explicit value:
+- [ ] **Step 4: Implement partitioned group labeling and singleton assignment**
 
-```python
-multiplier = 2.0 if group.kind == "meld" else 1.0
-pairwise_split_cost = multiplier * mismatch_penalty * sum(
-    1 for i, j in combinations(group.members, 2) if labels[i] != labels[j]
-)
-group_cost = sum(unary[i][labels[i]] for i in group.members) + pairwise_split_cost
-```
+- Validate exactly five finite non-negative costs for every group.
+- Validate groups form a disjoint, complete partition of `range(tile_count)`; reject overlaps, gaps, duplicate members, and out-of-range indexes instead of searching alternate covers.
+- For each group choose one zone for all members. `river_block` receives a type cost favoring `river`; `hand` and `meld` receive anchor-direction costs; `row` and `singleton` rely on the same normalized structural evidence without changing membership.
+- Minimize the sum of group costs. Because groups are partitioned, the optimum is deterministic per group and runtime is linear in group count.
+- Resolve equal costs by `ZONE_ORDER`, then group ID.
+- Build per-tile diagnostics from the chosen group-zone cost and the second-lowest zone cost for that same group.
+- `AdaptiveZoneSolver.solve(tile_count, costs, min_margin=0.0)` validates finite non-negative `min_margin`. Never emit `unknown_zone`; set `ambiguous=True` exactly when `second_cost-best_cost < min_margin`, retaining the best label for measurable coverage.
 
-This penalizes splitting a coherent group rather than penalizing the unified candidate, so the boundary-tile rescue test is mathematically achievable. The solver reports both unary and split-cost components.
+- [ ] **Step 5: Add malformed cost, determinism, and partition-validation tests**
 
-Apply these explicit constraints:
+Test missing zone keys, NaN/Infinity, duplicate/overlapping members, coverage gaps, out-of-range tile indexes, candidate order shuffling, and an all-singleton image.
 
-- `row` near the top edge may use `seat_across` or `river`.
-- `row` near the bottom edge may use `my_hand` or `river`.
-- left/right edge-aligned groups may use the corresponding side seat or `river`.
-- `meld` uses `2.0 * mismatch_penalty` for every unequal label pair, making the multiplier explicit and testable.
-- A group whose admissible label set is only `river` skips pairwise penalties entirely. Otherwise pairwise penalties apply symmetrically to unequal labels, including river/player splits; document this as a split penalty rather than claiming that unified `river` receives no relative benefit.
-- Overlapping candidate groups are processed in deterministic priority order and a tile may be claimed by only one accepted group.
-
-Do not introduce a general optimizer dependency. The number of labels per local group is five, so exact local enumeration is sufficient and auditable.
-
-- [ ] **Step 4: Connect layout groups and orientation to the strict facade**
-
-In structured `analyze_layout`:
-
-1. Normalize boxes.
-2. Build groups using classes and orientation scores from `ZoneAnalysisContext`.
-3. Calculate unary costs.
-4. Run `solve_costs`.
-5. If any margin is below `config.min_margin`, set `ambiguous=True` in diagnostics. In strict release evaluation, keep the chosen label so coverage remains measurable; in non-strict development mode allow `unknown_zone`.
-6. Return group membership, total cost, and tile diagnostics in debug output.
-
-- [ ] **Step 5: Add end-to-end synthetic layout tests**
-
-`tests/test_zone_pipeline.py` creates a trapezoidal table with five unambiguous groups and verifies:
-
-- all five zones appear;
-- perspective-warping the table and boxes leaves all labels unchanged;
-- shuffling box order only shuffles corresponding outputs;
-- strict mode raises on invalid table geometry;
-- non-strict mode returns `unknown_zone` plus failure diagnostics.
-
-- [ ] **Step 6: Run all zone tests**
+- [ ] **Step 6: Run tests**
 
 ```powershell
-python -m pytest tests/test_zone_solver.py tests/test_layout_graph.py tests/test_zone_pipeline.py tests/test_zones.py -q
+python -m pytest tests/test_adaptive_zone_solver.py -q
 ```
 
-Expected: all tests pass.
+Expected: PASS.
 
-- [ ] **Step 7: Commit the structured solver**
+- [ ] **Step 7: Commit**
 
 ```powershell
-git add mahjong_rt/zone_solver.py mahjong_rt/zones.py tests/test_zone_solver.py tests/test_zone_pipeline.py
-git commit -m "feat(zones): solve zone labels with layout constraints"
+git add mahjong_rt/adaptive_zone_solver.py tests/test_adaptive_zone_solver.py
+git commit -m "feat(zones): solve adaptive group labels"
 ```
 
 ---
 
-### Task 8: Immutable evaluation, CV, and 100% release report
+### Task 7: Integrate the table-free adaptive pipeline
+
+**Files:**
+- Modify: `mahjong-rt/mahjong_rt/zones.py`
+- Modify: `mahjong-rt/mahjong_rt/pipeline.py`
+- Modify: `mahjong-rt/mahjong_rt/replay.py`
+- Modify: `mahjong-rt/configs/pipeline.yaml`
+- Modify: `mahjong-rt/tests/test_zones.py`
+- Create: `mahjong-rt/tests/test_adaptive_zone_pipeline.py`
+
+- [ ] **Step 1: Write failing facade and end-to-end tests**
+
+```python
+from mahjong_rt.zone_types import ZoneAnalysisContext
+from mahjong_rt.zones import ZoneConfig, analyze_layout
+
+
+def test_legacy_mode_is_unchanged():
+    boxes = [[600, 600, 100, 100], [500, 300, 30, 30]]
+    before = analyze_layout(boxes, 1280, 720, ZoneConfig())
+    after = analyze_layout(boxes, 1280, 720, ZoneConfig(mode="legacy"))
+    assert after == before
+
+
+def test_adaptive_mode_needs_no_table_or_profile():
+    boxes = [[300 + i * 45, 620, 38, 60] for i in range(8)]
+    zones, debug = analyze_layout(
+        boxes, 1000, 800, ZoneConfig(mode="adaptive_groups"),
+        context=ZoneAnalysisContext(classes=("unknown",) * len(boxes)),
+    )
+    assert zones == ["my_hand"] * len(boxes)
+    assert debug["mode"] == "adaptive_groups"
+    assert "groups" in debug and "anchors" in debug
+
+
+def test_five_group_layout_maps_fixed_directions():
+    boxes = synthetic_five_zone_boxes()
+    zones, _ = analyze_layout(boxes, 1000, 800, ZoneConfig(mode="adaptive_groups"))
+    assert zones_for_members(zones, "bottom") == {"my_hand"}
+    assert zones_for_members(zones, "left") == {"seat_left"}
+    assert zones_for_members(zones, "top") == {"seat_across"}
+    assert zones_for_members(zones, "right") == {"seat_right"}
+    assert zones_for_members(zones, "center") == {"river"}
+```
+
+The test helper must construct explicit bottom/left/top/right long rows and three central short river rows; do not read repository labels.
+
+- [ ] **Step 2: Verify tests fail**
+
+```powershell
+python -m pytest tests/test_adaptive_zone_pipeline.py tests/test_zones.py -q
+```
+
+Expected: FAIL because `ZoneConfig.mode` and adaptive dispatch do not exist.
+
+- [ ] **Step 3: Extend facade without modifying legacy implementation**
+
+Extend `ZoneConfig`:
+
+```python
+mode: str = "legacy"  # legacy | adaptive_groups
+line_max_gap_iqr_factor: float = 1.5
+line_max_cross_offset_ratio: float = 0.55
+line_min_size_similarity: float = 0.60
+line_max_fit_error_ratio: float = 0.45
+min_margin: float = 0.0
+```
+
+Change signatures with keyword-only context:
+
+```python
+def analyze_layout(boxes, frame_w, frame_h, config, *, context=None) -> tuple[list[str], dict]: ...
+def assign_zones(boxes, frame_w, frame_h, config, *, context=None) -> list[str]: ...
+```
+
+Move the current body unchanged into `_analyze_legacy`. Adaptive dispatch must:
+
+1. validate context count;
+2. call `build_tile_relations`;
+3. call `extract_tile_lines`;
+4. call `build_layout_groups`;
+5. call `infer_layout_anchors`;
+6. construct group-zone costs from normalized evidence using the explicit formula below;
+7. call `AdaptiveZoneSolver.solve`;
+
+For group `g`, normalize regularity `q`, radial rank `r`, inside score `i`, optional class evidence `c∈{0,1}`, and directional alignments `a_z∈[0,1]`. Let `k_river`, `k_hand`, and `k_meld` be one-hot group-kind indicators. Define scores:
+
+```python
+river_score = (2 * i + 2 * k_river + (1 - r) + q) / 6
+player_score[z] = (2 * a_z + r + q + anchor_match_z + k_hand + .5 * k_meld + .5 * c) / 7
+cost[z] = 1.0 - clip(score[z], 0.0, 1.0)
+```
+
+`anchor_match_z` is 1 only when this group is the selected anchor for zone `z`; otherwise 0. For a meld and an available zone anchor `p_z`, define alignment to that anchor as `max(0, dot(unit(g-center), unit(p_z-center)))`; if the anchor is missing, alignment is 0. Replace `anchor_match_z` with the maximum of selected-anchor match and this alignment. The constants are dimensionless evidence weights shared by every image; no values may depend on image identity. Every production rule added after evaluation must first be expressed as a general structural test. `AdaptiveZoneSolver.solve(..., min_margin=config.min_margin)` marks a tile ambiguous exactly when `second_cost-best_cost < min_margin`; equality is not ambiguous.
+8. return JSON-safe debug data for tiles, lines, groups, center, anchors, selected groups, diagnostics, and failures.
+
+No adaptive module may import `table_geometry`, and no adaptive call accepts a profile or corner argument.
+
+- [ ] **Step 4: Wire only existing classes into runtime**
+
+In `pipeline.py`, derive class strings from current observations when available and call:
+
+```python
+context = ZoneAnalysisContext(
+    classes=tuple(obs.label if obs is not None else "unknown" for obs in observations),
+    strict=True,
+)
+zones = assign_zones(xywh, frame.shape[1], frame.shape[0], self.zone_config, context=context)
+```
+
+In `replay.py`, pass recorded class labels when available; when unavailable, pass `context=None`. Adaptive grouping must still work geometry-only. Preserve event and recording schemas.
+
+- [ ] **Step 5: Add explicit configuration**
+
+Under `zones` in `configs/pipeline.yaml`, add:
+
+```yaml
+  mode: legacy
+  line_max_gap_iqr_factor: 1.5
+  line_max_cross_offset_ratio: 0.55
+  line_min_size_similarity: 0.60
+  line_max_fit_error_ratio: 0.45
+  min_margin: 0.0
+```
+
+Do not add `profile_path`, `table_locator`, corner source, or homography settings.
+
+- [ ] **Step 6: Add transform, missing-seat, class-error, and shuffle tests**
+
+For the synthetic five-zone layout assert:
+
+- uniform translation/scale/resolution changes preserve labels;
+- mild affine distortion preserves labels;
+- removing all top-seat tiles does not invent `seat_across` on river tiles;
+- replacing every class with `unknown` preserves spatially unambiguous labels;
+- shuffling boxes/classes only shuffles corresponding outputs;
+- empty input returns `[]` and complete debug structure;
+- invalid boxes fail explicitly.
+
+- [ ] **Step 7: Run all tests**
+
+```powershell
+python -m pytest tests/test_adaptive_zone_pipeline.py tests/test_zones.py tests/test_zone_types.py -q
+python -m pytest tests/ -q
+```
+
+Expected: PASS; the legacy accuracy floor and all prior non-zone tests remain unchanged.
+
+- [ ] **Step 8: Commit**
+
+```powershell
+git add mahjong_rt/zones.py mahjong_rt/pipeline.py mahjong_rt/replay.py configs/pipeline.yaml tests/test_zones.py tests/test_adaptive_zone_pipeline.py
+git commit -m "feat(zones): integrate adaptive group recognition"
+```
+
+---
+
+### Task 8: Add immutable evaluation and honest 100% gates
 
 **Files:**
 - Create: `mahjong-rt/scripts/eval_zones.py`
 - Create: `mahjong-rt/tests/test_eval_zones.py`
 - Modify: `mahjong-rt/tests/test_zones.py`
 
-- [ ] **Step 1: Write failing evaluator tests**
+- [ ] **Step 1: Write failing metric and manifest tests**
 
 ```python
-import json
-from pathlib import Path
-
 import pytest
 
-from scripts.eval_zones import evaluate_predictions, validate_disjoint_images
+from scripts.eval_zones import evaluate_predictions, load_test_manifest
 
 
-def test_split_validation_rejects_overlap():
-    with pytest.raises(ValueError, match="overlap"):
-        validate_disjoint_images({"a.jpg"}, {"a.jpg", "b.jpg"})
-
-
-def test_cross_validation_requires_each_image_once():
-    folds = ({"a.jpg", "b.jpg"}, {"b.jpg", "c.jpg"})
-    with pytest.raises(ValueError, match="exactly once"):
-        validate_cross_validation_folds(folds, {"a.jpg", "b.jpg", "c.jpg"})
-
-
-def test_unknown_counts_as_wrong_and_uncovered():
+def test_unknown_is_wrong_and_uncovered():
     report = evaluate_predictions(
-        truths=["river", "seat_across"],
-        predictions=["river", "unknown_zone"],
-        records=[("a.jpg", 0), ("a.jpg", 1)],
-        diagnostics=[{}, {"failure": "low_margin"}],
+        truths=["river", "seat_across"], predictions=["river", "unknown_zone"],
+        records=[("a.jpg", 0), ("a.jpg", 1)], diagnostics=[{}, {}],
     )
     assert report["correct"] == 1
     assert report["total"] == 2
@@ -1155,316 +850,130 @@ def test_unknown_counts_as_wrong_and_uncovered():
     assert report["passed"] is False
 
 
-def test_perfect_report_requires_every_zone_recall_present():
-    report = evaluate_predictions(
-        truths=["my_hand", "river", "seat_left", "seat_across", "seat_right"],
-        predictions=["my_hand", "river", "seat_left", "seat_across", "seat_right"],
-        records=[("a.jpg", i) for i in range(5)],
-        diagnostics=[{} for _ in range(5)],
-    )
+def test_perfect_requires_every_present_zone_recall():
+    zones = ["my_hand", "seat_left", "seat_across", "seat_right", "river"]
+    report = evaluate_predictions(zones, zones, [("a.jpg", i) for i in range(5)], [{}] * 5)
     assert report["passed"] is True
+
+
+def test_manifest_rejects_paths_and_duplicates(tmp_path):
+    path = tmp_path / "images.txt"
+    path.write_text("batch/a.jpg\nfolder/b.jpg\nbatch/a.jpg\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="key|duplicate"):
+        load_test_manifest(path)
 ```
 
-- [ ] **Step 2: Verify evaluator tests fail**
+- [ ] **Step 2: Verify missing evaluator failure**
 
 ```powershell
 python -m pytest tests/test_eval_zones.py -q
 ```
 
-Expected: import failure for `scripts.eval_zones`.
+Expected: collection FAIL.
 
-- [ ] **Step 3: Implement evaluator and actionable failure output**
+- [ ] **Step 3: Implement strict evaluator primitives**
 
-The CLI is:
+Before implementing the integration helper, create `output/zone_test_manifest.txt` from the canonical annotation array's unique `image` fields only after independent review has removed all non-five-zone labels. Sort values lexicographically, require 20 unique records and 899 total boxes, write atomically, and expose a test that recomputes those counts and the manifest SHA-256. The loader builds `{record["image"]: record}` and rejects duplicate `image` values. It maps current fields `w→frame_width`, `h→frame_height`, and `cls→classes`; `boxes` and `zones` retain their names. `source`, `heuristic`, and `hit` are metadata only and never enter inference.
+
+`evaluate_predictions` must report:
+
+- correct/total, accuracy, coverage, confusion matrix;
+- per-zone recall and per-image accuracy;
+- every error with image, box index, GT, prediction, candidate line/group, selected group, best/second costs, margin, evidence, and failure category;
+- `passed=True` only for total > 0, accuracy 1, coverage 1, and recall 1 for every zone present in truth.
+
+Manifest entries must exactly match annotation-array `image` values such as `video/frame.jpg`; validation rejects empty entries, absolute paths, `.`/`..` segments, backslashes, control characters, duplicates, missing label records, and any boxes/zones/classes length mismatch. If the optional `--images` argument is supplied, it additionally rejects missing or undecodable images resolved beneath that root. Image pixels are never passed to zone inference.
+
+- [ ] **Step 4: Implement table-free CLI and immutable report**
 
 ```powershell
-python scripts/eval_zones.py --labels ../output/zone_annotation/zone_labels_with_class.json --images ../output/zone_annotation/images --profile configs/zones/current_v1.json --test-images z02.jpg,z04.jpg,z06.jpg,z08.jpg,z10.jpg,z12.jpg,z14.jpg,z16.jpg,z18.jpg,z20.jpg --report ../output/zone_eval_current_v1.json --require-perfect
+python scripts/eval_zones.py --labels ../output/zone_annotation/zone_labels_with_class.json --test-manifest ../output/zone_test_manifest.txt --report ../output/zone_eval_adaptive.json --require-perfect
 ```
 
 Requirements:
 
-- In fixed-profile mode, never fit or mutate a profile. In `--cross-validate` mode, call the pure `ZoneCalibrator.fit` separately inside each fold and persist its provenance; never overwrite the supplied or repository profile.
-- Verify calibration images from the profile are disjoint from `--test-images`.
-- Require `table_corners` for each evaluated image.
-- Run `analyze_layout` in structured strict mode.
-- Report correct/total, accuracy, coverage, confusion matrix, per-zone recall, per-image accuracy, `seat_across` errors, and all failures.
-- Each error includes image, box index, GT, prediction, best/second costs, margin, evidence, normalized features, group membership, and failure category.
-- `--require-perfect` exits `0` only when accuracy=1, coverage=1, and recall=1 for every zone present in GT; otherwise exit `1`.
-- Outside CV mode, exactly one of `--test-images` and `--test-manifest` is required. `--test-manifest` must be non-empty and contain one basename per non-empty line; reject absolute paths, path separators, `.`/`..`, and duplicates.
-- Require every normalized manifest entry to appear exactly once in labels, require labels basenames to be globally unique, and require its image file to exist and decode successfully. Missing, unresolved, or multiply matched entries abort the entire evaluation; no entry may be skipped.
-- Compute and report both SHA-256 of the original manifest bytes and SHA-256 of the canonical UTF-8 newline-joined normalized basename list; persist that normalized list in the report.
-- A result is labeled `profile_out_of_fold` only when every dataset image appears in exactly one held-out fold and no held-out image appears in that fold's fitted profile provenance. It may be promoted to `full_out_of_fold` only when the report additionally proves that frozen algorithm/grid/locator versions and every learned component's training provenance exclude all corresponding held-out images. A fixed-profile subset result is labeled `holdout_subset`; a profile evaluated on any provenance image is labeled `diagnostic_leaky` and can never pass a release gate.
-- Store CLI arguments, profile digest, labels SHA-256, git commit, and UTC timestamp in the JSON report.
-- Never fit or mutate a profile in fixed-profile mode; CV fold fitting is the sole exception and must produce in-memory fold-local profiles with recorded digests.
+- force `ZoneConfig(mode="adaptive_groups")`;
+- never read `table_corners`, calibration profiles, or non-manifest annotation records;
+- require canonical five-zone truth; report legacy labels and abort before inference;
+- run every manifest annotation record exactly once and lock predictions before scoring;
+- store normalized annotation `image` values, original/canonical manifest SHA-256, labels SHA-256, selected configuration, git commit, and UTC timestamp;
+- write canonical UTF-8 JSON atomically with sorted keys and `allow_nan=False`;
+- exit `0` under `--require-perfect` only when `passed=True`, otherwise `1`.
 
-- [ ] **Step 4: Implement honest image-level five-fold development evaluation**
+- [ ] **Step 5: Add current-set integration gate**
 
-Add optional `--cross-validate 5 --seed 0`. In each fold:
-
-1. Fit a fresh profile from four folds only.
-2. If orientation weight is enabled, require an orientation artifact; verify its labels/boxes/model digests, filter scores to training images for prior fitting, and pass held-out scores only at prediction time. Validate the canonical `training_images` list against `training_manifest_sha256` and require its set to be disjoint from held-out zone images; otherwise mark the fold `profile_oof_only`, not eligible for the 899/899 OOF gate.
-3. Select any solver weights from a finite declared grid on those training images only.
-4. Evaluate the held-out images once.
-5. Aggregate predictions across folds before calculating overall and per-zone metrics.
-
-Print both mean fold accuracy and aggregate box accuracy. Persist every fold's training image names, held-out names, fitted profile digest, selected weights, orientation provenance, and predictions. Validate that the union of held-out images equals all 20 images and that held-out folds are pairwise disjoint. Because these 20 images have already informed algorithm design, label review, locator thresholds, and the candidate grid, name this report `profile_out_of_fold`, not a statistically untouched generalization result. It is the engineering current-set 899/899 gate only; the genuinely sealed new-scene gate remains the sole untouched generalization claim. Keep the fixed-profile holdout result separate and report its actual held-out box count rather than calling it 899/899.
-
-- [ ] **Step 5: Replace the misleading loose strict regression**
-
-Keep `test_accuracy_on_labelled_set` as the legacy `>= 0.92` compatibility test. Add a new marked integration test that invokes the evaluator only when corners and `configs/zones/current_v1.json` exist:
+Add:
 
 ```python
 @pytest.mark.integration
-def test_structured_release_gate_on_current_set():
-    report = run_current_structured_cross_validation()
-    assert report["evaluation_kind"] in {"profile_out_of_fold", "full_out_of_fold"}
+def test_adaptive_release_gate_on_current_set():
+    report = run_current_adaptive_evaluation(
+        labels_path=Path("../output/zone_annotation/zone_labels_with_class.json"),
+        manifest_path=Path("../output/zone_test_manifest.txt"),
+    )
     assert report["total"] == 899
     assert report["correct"] == 899, format_failures(report)
     assert report["coverage"] == 1.0
+    assert all(value == 1.0 for value in report["recall"].values())
 ```
 
-Do not weaken or skip this test once the corner annotations and profile are committed.
+Do not skip failures. If five `opponent_wall` labels remain, the helper must fail with a canonical-label error rather than silently dropping or remapping them.
 
-- [ ] **Step 6: Run evaluator tests and current held-out split**
+- [ ] **Step 6: Run evaluator tests and current diagnostic**
 
 ```powershell
 python -m pytest tests/test_eval_zones.py tests/test_zones.py -q
-python scripts/eval_zones.py --labels ../output/zone_annotation/zone_labels_with_class.json --images ../output/zone_annotation/images --profile configs/zones/current_v1.json --test-images z02.jpg,z04.jpg,z06.jpg,z08.jpg,z10.jpg,z12.jpg,z14.jpg,z16.jpg,z18.jpg,z20.jpg --report ../output/zone_eval_current_v1.json
+python scripts/eval_zones.py --labels ../output/zone_annotation/zone_labels_with_class.json --test-manifest ../output/zone_test_manifest.txt --report ../output/zone_eval_adaptive.json
 ```
 
-Expected: tests pass. The evaluation command always writes a report; it may expose errors at this stage and must not be described as a 100% pass unless its JSON says `passed: true`.
+Expected: unit tests PASS. The CLI always writes an honest report after successful input validation; do not claim success unless it says `passed: true`.
 
-- [ ] **Step 7: Run cross-validation and classify every remaining error**
+- [ ] **Step 7: Classify errors and improve only general structural rules**
+
+Every error receives exactly one category:
+
+- bad input box;
+- row extraction;
+- erroneous group merge;
+- erroneous row split;
+- group type;
+- center/anchor;
+- seat direction;
+- singleton attachment;
+- global cost/constraint;
+- truth ambiguity.
+
+For implementation errors, return to the owning task with a minimal failing test derived from the structural pattern, not an image-name or box-index exception. Truth ambiguity uses the existing independent review workflow.
+
+- [ ] **Step 8: Run the current 899/899 gate**
 
 ```powershell
-python scripts/eval_zones.py --labels ../output/zone_annotation/zone_labels_with_class.json --images ../output/zone_annotation/images --cross-validate 5 --seed 0 --report ../output/zone_eval_cv_v1.json
+python -m pytest tests/ -q
+python -m pytest tests/test_zones.py -q -m integration
+python scripts/eval_zones.py --labels ../output/zone_annotation/zone_labels_with_class.json --images ../output/zone_annotation/images --test-manifest ../output/zone_test_manifest.txt --report ../output/zone_eval_adaptive_final.json --require-perfect
 ```
 
-For each error, assign exactly one category from the design: table localization, perspective mapping, annotation ambiguity, across/river overlap, orientation evidence, grouping, solver constraint, or bad input box. Record category counts in the report rather than adding data-specific hard-coded exceptions.
+Expected for completion: all tests PASS and evaluator exits `0` with `correct=total=899`, coverage 1, and every present-zone recall 1. If not, retain the report and do not mark the release gate complete.
 
-- [ ] **Step 8: Commit the immutable evaluator**
+- [ ] **Step 9: Run a genuinely sealed new-set gate**
+
+Before scoring, freeze algorithm commit, configuration, exact annotation `image` values, image SHA-256 values when images are archived, expected record count, expected box count, and manifest SHA-256 in a sealed inventory. Do **not** put truth-label SHA-256 into the pre-prediction inventory because truth is still hidden. Run predictions first using a labels-free inference annotation array whose records contain only `image`, `w`, `h`, `boxes`, and optional `cls`, then persist and hash the prediction artifact. Only afterward reveal truth labels and record their SHA-256 in the final report:
+
+```powershell
+python scripts/eval_zones.py predict --inputs <sealed-inference-inputs.json> --test-manifest <sealed-manifest.txt> --sealed-inventory <sealed-inventory.json> --predictions <locked-predictions.json>
+python scripts/eval_zones.py score --labels <revealed-sealed-labels.json> --test-manifest <sealed-manifest.txt> --sealed-inventory <sealed-inventory.json> --predictions <locked-predictions.json> --report <sealed-report.json> --require-perfect
+```
+
+`predict` must reject truth-bearing inputs and validate the frozen commit/config/manifest/counts. It writes canonical prediction JSON bytes atomically with sorted keys, compact separators, UTF-8, and `allow_nan=False`, then writes the SHA-256 of those exact bytes to `<predictions>.sha256`; the digest is not embedded in the JSON. `score` must never rerun inference; it validates the sidecar digest against the exact prediction bytes, then compares revealed truth and records truth SHA-256 in the report. Any inventory/hash/count mismatch aborts. Passing requires N/N with no corner annotations or other human inference input. Once a failed set is inspected for development, retire it and collect a new sealed set for the next generalization claim.
+
+- [ ] **Step 10: Commit evaluator only after verified behavior**
 
 ```powershell
 git add scripts/eval_zones.py tests/test_eval_zones.py tests/test_zones.py
-git commit -m "test(zones): add sealed perfect-accuracy evaluator"
+git commit -m "test(zones): add table-free perfect-accuracy gates"
 ```
 
----
-
-### Task 9: Runtime configuration and explicit failure behavior
-
-**Files:**
-- Modify: `mahjong-rt/mahjong_rt/pipeline.py`
-- Modify: `mahjong-rt/mahjong_rt/replay.py`
-- Modify: `mahjong-rt/configs/pipeline.yaml`
-- Modify: `mahjong-rt/tests/test_zone_pipeline.py`
-
-- [ ] **Step 1: Write failing configuration and replay tests**
-
-```python
-import pytest
-
-from mahjong_rt.pipeline import PipelineConfig
-from mahjong_rt.replay import replay
-
-
-def test_structured_config_requires_profile_path():
-    with pytest.raises(ValueError, match="profile"):
-        PipelineConfig(det_weights="d.pt", cls_weights="c.onnx", zones={"mode": "structured"}).validate()
-
-
-def test_replay_rejects_structured_mode_without_table_geometry(recording):
-    with pytest.raises(ValueError, match="table geometry"):
-        replay(recording, zones_cfg={"mode": "structured", "profile_path": "configs/zones/current_v1.json"})
-```
-
-- [ ] **Step 2: Verify focused tests fail**
-
-```powershell
-python -m pytest tests/test_zone_pipeline.py -q
-```
-
-Expected: `PipelineConfig.validate` is missing or strict replay does not reject missing geometry.
-
-- [ ] **Step 3: Add explicit structured configuration**
-
-Add these keys under `zones` in `configs/pipeline.yaml`:
-
-```yaml
-zones:
-  mode: legacy
-  strict_failure: true
-  min_margin: 0.0
-  profile_path: null
-  table_locator:
-    mode: annotated  # annotated | automatic
-    min_confidence: 0.95
-    min_area_ratio: 0.08
-    max_homography_condition: 1000000.0
-```
-
-The default remains `legacy` because the existing realtime video pipeline does not provide per-frame corner annotations and its event contract must not change accidentally. Static evaluation explicitly selects structured mode.
-
-Add `PipelineConfig.validate()` and call it before model loading. Resolve `profile_path` relative to the YAML file in CLI loaders, not the process working directory. Load a `ZoneProfile` once during `Pipeline` initialization.
-
-- [ ] **Step 4: Wire context into pipeline only when available**
-
-Add a `table_geometry_provider` dependency to `Pipeline.__init__`:
-
-```python
-def __init__(self, config: PipelineConfig, table_geometry_provider: Callable[[np.ndarray], TableGeometry] | None = None) -> None:
-```
-
-In structured mode:
-
-1. Require the provider.
-2. Obtain table geometry for the frame.
-3. Reuse current crops and compute orientation scores when profile orientation weight is nonzero.
-4. Build `ZoneAnalysisContext` with table, classes, and orientations.
-5. Call `assign_zones(..., context=context, profile=self.zone_profile)`.
-6. Propagate failures in strict mode; never silently call legacy mode.
-
-Keep all published event fields and protocol version unchanged.
-
-- [ ] **Step 5: Make replay limitations explicit**
-
-Because current recordings contain boxes, classes, probabilities, and GMC homographies but no table corners or source frame, `replay` must raise a clear error for structured mode. Legacy replay remains unchanged. A future recording schema extension is outside this static-image scope.
-
-- [ ] **Step 6: Run all tests**
-
-```powershell
-python -m pytest tests/ -q
-```
-
-Expected: all tests pass, including existing tracker, voter, metrics, zones, and replay behavior.
-
-- [ ] **Step 7: Commit runtime wiring**
-
-```powershell
-git add mahjong_rt/pipeline.py mahjong_rt/replay.py configs/pipeline.yaml tests/test_zone_pipeline.py
-git commit -m "feat(zones): wire strict calibrated mode explicitly"
-```
-
----
-
-### Task 10: Automatic table-border locator and final release gates
-
-**Files:**
-- Modify: `mahjong-rt/mahjong_rt/table_geometry.py`
-- Modify: `mahjong-rt/tests/test_table_geometry.py`
-- Modify: `mahjong-rt/scripts/eval_zones.py`
-- Create: `mahjong-rt/tests/fixtures/table_locator/expected.json`
-
-- [ ] **Step 1: Write failing locator confidence tests**
-
-```python
-import cv2
-import numpy as np
-
-from mahjong_rt.table_geometry import TableBorderLocator
-
-
-def synthetic_table():
-    image = np.zeros((720, 1280, 3), np.uint8)
-    polygon = np.asarray([[120,620],[260,90],[1030,110],[1170,630]], np.int32)
-    cv2.fillConvexPoly(image, polygon, (55, 115, 70))
-    cv2.polylines(image, [polygon], True, (210, 210, 210), 8)
-    return image
-
-
-def test_locator_finds_four_ordered_corners():
-    result = TableBorderLocator().locate(synthetic_table())
-    assert result.geometry.corners.shape == (4, 2)
-    assert result.geometry.confidence >= .95
-    assert result.failures == ()
-
-
-def test_locator_rejects_blank_image():
-    result = TableBorderLocator().locate(np.zeros((720,1280,3), np.uint8))
-    assert result.geometry is None
-    assert "no_table_quadrilateral" in result.failures
-```
-
-- [ ] **Step 2: Verify tests fail**
-
-```powershell
-python -m pytest tests/test_table_geometry.py -q
-```
-
-Expected: `TableBorderLocator` is missing.
-
-- [ ] **Step 3: Implement an explainable OpenCV locator**
-
-Implement this deterministic pipeline:
-
-1. Downscale only for detection and retain scale factors.
-2. Convert to HSV and Lab.
-3. Build table-surface candidates from saturation and local color consistency.
-4. Apply morphological close/open with kernels proportional to image size.
-5. Find external contours.
-6. Approximate convex quadrilaterals with `cv2.approxPolyDP`.
-7. Score candidates by area ratio, convexity, edge support from Canny, opposite-edge consistency, and percentage of tile centers inside when boxes are supplied.
-8. Refine each edge using `cv2.fitLine` on nearby edge pixels and intersect adjacent lines.
-9. Return the best valid `TableGeometry` plus component scores and failures.
-
-Confidence is a weighted score with weights fixed in configuration. Do not fit locator thresholds on sealed test labels.
-
-- [ ] **Step 4: Add real-image locator fixtures**
-
-Select at least one image from each distinct source/camera represented in the 20-image set. Store only image names and expected annotated corners in `tests/fixtures/table_locator/expected.json`; reuse the existing images rather than copying binaries. Assert:
-
-- all fixtures return a valid quadrilateral;
-- mean corner error is at most 2% of image diagonal;
-- every GT tile center lies within the located table or an explicitly configured edge tolerance;
-- any confidence below `0.95` fails the test.
-
-- [ ] **Step 5: Compare automatic and annotated geometry**
-
-Run the evaluator twice on the development split:
-
-```powershell
-python scripts/eval_zones.py --labels ../output/zone_annotation/zone_labels_with_class.json --images ../output/zone_annotation/images --profile configs/zones/current_v1.json --table-source annotated --test-images z02.jpg,z04.jpg,z06.jpg,z08.jpg,z10.jpg,z12.jpg,z14.jpg,z16.jpg,z18.jpg,z20.jpg --report ../output/zone_eval_annotated.json
-python scripts/eval_zones.py --labels ../output/zone_annotation/zone_labels_with_class.json --images ../output/zone_annotation/images --profile configs/zones/current_v1.json --table-source automatic --test-images z02.jpg,z04.jpg,z06.jpg,z08.jpg,z10.jpg,z12.jpg,z14.jpg,z16.jpg,z18.jpg,z20.jpg --report ../output/zone_eval_automatic.json
-```
-
-Any label difference must be attributed to a measured corner displacement or normalization failure. Do not compensate with per-image zone exceptions.
-
-- [ ] **Step 6: Run current-set release gate**
-
-After error analysis and only generic algorithm/profile changes, fit the declared production calibration set and run the disjoint current test split with `--require-perfect`:
-
-```powershell
-python scripts/eval_zones.py --labels ../output/zone_annotation/zone_labels_with_class.json --images ../output/zone_annotation/images --profile configs/zones/current_v1.json --table-source automatic --test-images z02.jpg,z04.jpg,z06.jpg,z08.jpg,z10.jpg,z12.jpg,z14.jpg,z16.jpg,z18.jpg,z20.jpg --report ../output/zone_eval_release.json --require-perfect
-```
-
-Expected for this holdout diagnostic: exit code `0`, `correct == total`, `coverage == 1.0`, and each present zone recall equals `1.0`. The report must be marked `holdout_subset` and show its actual number of boxes; it does not by itself satisfy the current-set 899/899 gate. Then run the five-fold command from Task 8 with `--require-perfect`; only a `profile_out_of_fold` or stronger `full_out_of_fold` report with `correct=total=899` satisfies the engineering current-set gate. Neither substitutes for the sealed new-scene generalization gate. If either check fails, retain the reports and return to the owning module based on the error category; do not mark this step complete.
-
-- [ ] **Step 7: Run a genuinely sealed new-scene gate**
-
-Before revealing any results, create and freeze a new-scene inventory containing the exact calibration and sealed test basenames, exact expected image count, exact expected GT box count, labels SHA-256, canonical test-manifest SHA-256, image-content SHA-256 values, frozen algorithm/profile/model hashes, and an independent reviewer/signature field. The inventory itself must be committed or stored in an append-only location before evaluation. Use 20–30 calibration images and 30–50 sealed test images from a new camera configuration, then run:
-
-```powershell
-python scripts/eval_zones.py --labels <sealed-labels.json> --images <sealed-images-dir> --profile <frozen-profile.json> --table-source automatic --sealed-inventory <frozen-inventory.json> --test-manifest <sealed-test-images.txt> --report <sealed-report.json> --require-perfect
-```
-
-The evaluator must require exact equality between the normalized manifest and the frozen inventory's sealed-test set, and exact matches for expected image count, expected box count, labels hash, every image hash, algorithm/profile/model hashes, and precommitted manifest hash. Any missing or extra entry aborts before inference. Expected for release: exit code `0` and N/N. If labels are opened to diagnose a failure, retire that sealed set, move it to development data, and collect a new sealed test set for the next claim.
-
-- [ ] **Step 8: Run full verification**
-
-```powershell
-python -m pytest tests/ -q
-python -m pytest tests/ -q -m integration
-python scripts/eval_zones.py --labels ../output/zone_annotation/zone_labels_with_class.json --images ../output/zone_annotation/images --cross-validate 5 --seed 0 --report ../output/zone_eval_cv_final.json
-```
-
-Expected: all unit and integration tests pass. Record the CV metrics without describing them as a sealed-test guarantee.
-
-- [ ] **Step 9: Commit only after both release gates pass**
-
-```powershell
-git add mahjong_rt/table_geometry.py tests/test_table_geometry.py tests/fixtures/table_locator/expected.json scripts/eval_zones.py configs/zones/current_v1.json
-git commit -m "feat(zones): locate table borders for calibrated recognition"
-```
+Do not commit generated reports unless the repository's existing output policy explicitly tracks them.
 
 ---
 
@@ -1472,25 +981,30 @@ git commit -m "feat(zones): locate table borders for calibrated recognition"
 
 ### Spec coverage
 
-- Perspective normalization and quality checks: Tasks 2 and 10.
-- Independent calibration and versioned profile: Task 3.
-- Four-rotation orientation evidence: Task 5.
-- Non-chaining layout graph and meld evidence: Task 6.
-- Structured global solving, margins, evidence, ambiguity: Tasks 4 and 7.
-- Backward-compatible facade and explicit strict failure: Tasks 4 and 9.
-- Annotation rules, legacy `opponent_wall` migration, and independent double-review audit: Task 2.
-- Image-level isolation, cross-validation, accuracy/coverage, per-zone recall: Task 8.
-- Current out-of-fold 899/899 and genuinely sealed N/N gates: Tasks 8 and 10.
-- No video temporal logic, detector retraining, or embedded region head: preserved throughout.
+- Existing boxes/classes only and no new manual/model input: Tasks 1, 2, and 7.
+- Frame-adaptive relative measurements: Task 2.
+- Direction-constrained rows and anti-chaining: Task 3.
+- Hand, meld, river-block, and singleton structure: Task 4.
+- Robust center, relative outskirts, fixed seat directions, and missing seats: Task 5.
+- Whole-group assignment over a disjoint partition, singleton handling, margins, and evidence: Task 6.
+- Legacy compatibility and runtime/replay integration: Task 7.
+- No table corners in current/new validation and honest 100% gates: Task 8.
+- Label ambiguity and five-zone migration remain independently reviewed, never inferred automatically: scope plus Task 8.
+
+### Placeholder scan
+
+The plan contains no `TBD`, `TODO`, per-image exception, unspecified profile, or deferred implementation step. Every code-producing task defines its public contracts, failure command, passing command, and commit boundary.
 
 ### Type consistency
 
-- `TableGeometry`, `OrientationScore`, `TileZoneDiagnostic`, and `ZoneAnalysisContext` originate in Task 1 and are reused unchanged.
-- `NormalizedTile` and `NormalizedLayout` originate in Task 2.
-- `ZoneProfile` originates in Task 3.
-- `StructuredZoneSolver` begins with unary scoring in Task 4 and gains `solve_costs` in Task 7.
-- `assign_zones` retains its original positional parameters; all new context is keyword-only.
+- `ZoneAnalysisContext` becomes table-free in Task 1 and is used unchanged in Task 7.
+- `TileRelations` originates in Task 2 and feeds Tasks 3–5.
+- `TileLine` originates in Task 3 and feeds Task 4.
+- `LayoutGroup` originates in Task 4 and feeds Tasks 5–7.
+- `AnchorResult` originates in Task 5 and feeds Task 7 cost construction.
+- `GroupCandidateCost` and `AdaptiveSolveResult` originate in Task 6 and are used by Task 7.
+- `assign_zones` retains its four positional arguments; optional context remains keyword-only.
 
-### Dependency check
+### Dependency and scope check
 
-All algorithms use existing NumPy/OpenCV/ONNX Runtime dependencies. No new package is required.
+All production algorithms use existing NumPy and the standard library. The plan adds one cohesive static-zone subsystem and does not add table detection, model training, temporal reasoning, or unrelated refactoring.
