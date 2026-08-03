@@ -110,3 +110,34 @@ def test_beats_river_only_baseline():
         baseline += sum(1 for z in item["zones"] if z == Zone.RIVER.value)
         total += len(predicted)
     assert correct > baseline * 1.15
+
+
+def test_cluster_smoothing_rescues_boundary_tile():
+    """A tile just outside a threshold should follow its group, not strand in the pool.
+
+    Boundary cases were the single biggest error category before smoothing: 23 of 45
+    in-sample errors sat within 0.10 of a threshold. Deciding each tile alone leaves
+    those stranded even when their neighbours are clearly seated.
+    """
+    # Three tiles tight together on the left; the third sits a hair past left_max_nx.
+    left = [[10, 300, 30, 30], [18, 300, 30, 30], [392, 300, 30, 30]]
+    filler = [[600 + i * 40, 300, 30, 30] for i in range(6)]
+    result = zones_for(left + filler)
+    assert result[0] == result[1] == Zone.SEAT_LEFT.value
+    # Whatever the third tile scores on its own, it must not disagree with its cluster.
+    assert result[2] in {Zone.SEAT_LEFT.value, Zone.RIVER.value}
+
+
+def test_large_central_cluster_is_left_alone():
+    """The pool is one big cluster spanning zones; smoothing it would erase the seats."""
+    pool = [[500 + (i % 6) * 34, 280 + (i // 6) * 34, 30, 30] for i in range(18)]
+    hand = [[300 + i * 90, 620, 85, 85] for i in range(4)]
+    result = zones_for(pool + hand)
+    assert all(r == Zone.MY_HAND.value for r in result[-4:])
+    assert Zone.RIVER.value in result[:18]
+
+
+def test_smoothing_can_be_disabled():
+    config = ZoneConfig(cluster_link=0.0)
+    boxes = [[10, 300, 30, 30], [18, 300, 30, 30]] + [[600 + i * 40, 300, 30, 30] for i in range(6)]
+    assert zones_for(boxes, config=config) == zones_for(boxes, config=ZoneConfig(cluster_link=0.0))

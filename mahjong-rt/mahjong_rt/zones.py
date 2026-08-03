@@ -22,7 +22,17 @@ while a seat's tiles sit further apart relative to their own size. A side seat i
 inverse: its boxes overlap heavily (median nearest neighbour 0.31 of a box width),
 because those tiles are seen edge-on and their boxes pile up.
 
-Per-zone recall now: hand 99.2%, river 97.2%, right 97.8%, left 77.6%, across 71.0%.
+**Clusters are the fifth signal.** A seat's tiles sit together as one compact group,
+which the pool does not. Deciding each tile alone strands boundary cases — 23 of 45
+in-sample errors sat within 0.10 of a threshold, in the pool while their neighbours were
+correctly seated. Voting inside a cluster lets those follow their group.
+
+Order matters here. Clustering *instead of* per-tile rules is worse (91.9% vs 93.6%):
+single-linkage chains the seat across into the pool through the tiles between them, and
+that zone collapses to 46.8%. Per-tile first, then smoothing within small clusters only,
+reaches **94.5% cross-validated**.
+
+Per-zone recall: hand 100%, river 97.2%, right 97.8%, left 85.7%, across 71.0%.
 
 What the labels showed (median, and 10-90% spread of normalised x):
 
@@ -68,6 +78,13 @@ class ZoneConfig:
     # from 88.9% to 93.1%; position and size alone had plateaued.
     across_min_nn: float = 0.55
     left_max_nn: float = 0.45
+    # Tiles belonging to one seat sit together as a compact group. Deciding each tile on
+    # its own leaves boundary cases stranded — a tile a hundredth outside a threshold
+    # lands in the pool while its neighbours are correctly seated. Smoothing within a
+    # cluster lets those tiles follow their group.
+    cluster_link: float = 1.2      # same cluster if centres are within this many mean widths
+    cluster_max_frac: float = 0.35  # clusters larger than this share of the frame are the
+                                    # pool itself, which spans zones — leave them alone
 
 
 def analyze_layout(
@@ -118,6 +135,39 @@ def analyze_layout(
             # took this module from 39.7% to 92.5%: the pool is the majority class, and
             # a rule that guesses seats aggressively loses far more than it gains.
             zones.append(Zone.RIVER.value)
+
+    # --- Cluster smoothing. Assigning per tile then voting inside each group beats both
+    # alternatives measured on the labelled set: per-tile alone 93.6%, clustering alone
+    # 91.9% (single-linkage chains the seat across into the pool and it collapses to
+    # 46.8%), this hybrid 94.5% cross-validated.
+    if n > 1 and config.cluster_link > 0:
+        parent = list(range(n))
+
+        def find(i: int) -> int:
+            while parent[i] != i:
+                parent[i] = parent[parent[i]]
+                i = parent[i]
+            return i
+
+        widths = arr[:, 2]
+        for i in range(n):
+            for j in range(i + 1, n):
+                if float(np.hypot(cx[i] - cx[j], cy[i] - cy[j])) < config.cluster_link * (widths[i] + widths[j]) / 2:
+                    ri, rj = find(i), find(j)
+                    if ri != rj:
+                        parent[ri] = rj
+        groups: dict[int, list[int]] = {}
+        for i in range(n):
+            groups.setdefault(find(i), []).append(i)
+        for members in groups.values():
+            if len(members) < 2 or len(members) > config.cluster_max_frac * n:
+                continue
+            counts: dict[str, int] = {}
+            for i in members:
+                counts[zones[i]] = counts.get(zones[i], 0) + 1
+            winner = max(counts.items(), key=lambda kv: kv[1])[0]
+            for i in members:
+                zones[i] = winner
 
     return zones, {"median_short": round(median, 1), "counts": {z: zones.count(z) for z in set(zones)}}
 
