@@ -30,9 +30,21 @@ correctly seated. Voting inside a cluster lets those follow their group.
 Order matters here. Clustering *instead of* per-tile rules is worse (91.9% vs 93.6%):
 single-linkage chains the seat across into the pool through the tiles between them, and
 that zone collapses to 46.8%. Per-tile first, then smoothing within small clusters only,
-reaches **94.5% cross-validated**.
+reaches 94.5% cross-validated.
 
-Per-zone recall: hand 100%, river 97.2%, right 97.8%, left 85.7%, across 71.0%.
+**Distance to the dense mass is the sixth, and it came from the game rather than the
+data.** 四川麻将 has 定缺: a player declares a void suit and lays that one tile in front
+of themselves. It is a single tile, so the density test rejects it, and every one of them
+was landing in the pool. What marks it is not density but separation — a lone side-seat
+tile sits a median 4.1 own-widths clear of the nearest pool tile, against 0.7 for the
+pool's own tiles. The feature needs no labels: the pool is by definition whatever is
+crowded. seat_left went 93.8% -> 100%, total to **96.3% cross-validated**.
+
+Per-zone recall: hand 100%, river 97.6%, left 100%, right 96.0%, across 72.3%.
+
+A caution on all of these numbers: they moved about a point when 33 label errors were
+found and fixed (`scripts/audit_zone_labels.py`). Earlier figures in this file's history
+are against the uncorrected set and are not comparable.
 
 What the labels showed (median, and 10-90% spread of normalised x):
 
@@ -78,6 +90,15 @@ class ZoneConfig:
     # from 88.9% to 93.1%; position and size alone had plateaued.
     across_min_nn: float = 0.55
     left_max_nn: float = 0.45
+    # A 定缺 tile breaks the density test above. Declaring a void suit puts one tile in
+    # front of its owner, alone — so it is isolated, and `left_max_nn` rejects it, which
+    # is how every one of them ended up in the pool. What actually marks it as a seat's
+    # tile is the gap: it sits well clear of the discard pile. Distance to the dense mass
+    # needs no labels — the pool is by definition whatever is crowded.
+    # Adding this took seat_left from 93.8% to 100% cross-validated at a cost of 0.2% on
+    # the pool. 4 of 5 folds independently chose 2.0.
+    dense_max_nn: float = 0.55   # a tile this packed counts as part of the dense mass
+    seat_min_gap: float = 2.0    # own widths clear of that mass to claim a seat alone
     # Tiles belonging to one seat sit together as a compact group. Deciding each tile on
     # its own leaves boundary cases stranded — a tile a hundredth outside a threshold
     # lands in the pool while its neighbours are correctly seated. Smoothing within a
@@ -110,23 +131,39 @@ def analyze_layout(
     # Distance to the closest other tile, in units of this tile's own width. Normalising
     # by own width keeps it comparable across depth: a far tile is smaller, and so are
     # the gaps around it.
-    nn = np.empty(n, dtype=np.float32)
-    for i in range(n):
-        d = np.hypot(cx - cx[i], cy - cy[i])
-        d[i] = np.inf
-        nn[i] = float(d.min()) / max(float(arr[i, 2]), 1.0) if n > 1 else 9.9
+    dist = np.hypot(cx[:, None] - cx[None, :], cy[:, None] - cy[None, :])
+    np.fill_diagonal(dist, np.inf)
+    nn = np.full(n, 9.9, dtype=np.float32)
+    if n > 1:
+        nn = (dist.min(axis=1) / np.maximum(arr[:, 2], 1.0)).astype(np.float32)
+
+    # Distance to the nearest *crowded* tile. The dense mass is the discard pile, so a
+    # tile far from it is somebody's, not the pool's — this is what rescues the lone 定缺
+    # tile that the density test above throws away.
+    # Zero when nothing is crowded: with no pile in view there is nothing to be clear of,
+    # so the signal carries no information and must not license a seat. Claiming seats
+    # without evidence is exactly how v1-v3 scored 39.7%.
+    gap = np.zeros(n, dtype=np.float32)
+    dense = np.where(nn <= config.dense_max_nn)[0]
+    if len(dense):
+        for i in range(n):
+            others = dense[dense != i]
+            if len(others):
+                gap[i] = float(dist[i, others].min()) / max(float(arr[i, 2]), 1.0)
 
     zones: list[str] = []
     for i in range(n):
+        clear = gap[i] >= config.seat_min_gap
         if size_ratio[i] >= config.hand_size_ratio and ny[i] >= config.hand_min_ny:
             zones.append(Zone.MY_HAND.value)
-        elif nx[i] <= config.left_max_nx and nn[i] <= config.left_max_nn:
-            # Left seat's tiles cluster together; something equally far left but isolated
-            # is more often a stray pool tile.
+        elif nx[i] <= config.left_max_nx and (nn[i] <= config.left_max_nn or clear):
+            # Left seat's tiles cluster together — or, if there is only the one 定缺 tile,
+            # sit well clear of the pile. Isolated *and* close to the pile is a stray
+            # discard.
             zones.append(Zone.SEAT_LEFT.value)
         elif nx[i] >= config.right_min_nx:
             zones.append(Zone.SEAT_RIGHT.value)
-        elif ny[i] <= config.across_max_ny and nn[i] >= config.across_min_nn:
+        elif ny[i] <= config.across_max_ny and (nn[i] >= config.across_min_nn or clear):
             # Across overlaps the pool horizontally. What separates them is density: the
             # pool is packed, a seat's tiles are not.
             zones.append(Zone.SEAT_ACROSS.value)
@@ -152,7 +189,7 @@ def analyze_layout(
         widths = arr[:, 2]
         for i in range(n):
             for j in range(i + 1, n):
-                if float(np.hypot(cx[i] - cx[j], cy[i] - cy[j])) < config.cluster_link * (widths[i] + widths[j]) / 2:
+                if float(dist[i, j]) < config.cluster_link * (widths[i] + widths[j]) / 2:
                     ri, rj = find(i), find(j)
                     if ri != rj:
                         parent[ri] = rj

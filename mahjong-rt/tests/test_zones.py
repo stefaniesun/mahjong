@@ -53,10 +53,33 @@ def test_lateral_cuts_pick_side_seats():
     assert result[2] == Zone.SEAT_RIGHT.value
 
 
-def test_isolated_far_left_tile_is_not_a_seat():
-    """Density is the signal that lifted accuracy 88.9% -> 93.1%; pin it."""
-    boxes = [[10, 300, 30, 30]] + [[600 + i * 32, 300, 30, 30] for i in range(6)]
-    assert zones_for(boxes)[0] == Zone.RIVER.value
+def test_isolated_far_left_tile_next_to_the_pile_is_not_a_seat():
+    """Density lifted accuracy 88.9% -> 93.1%; pin the half of it that still holds.
+
+    Isolated on its own is not enough to claim a seat — a stray discard at the edge of
+    the pile is isolated too. What separates them is the gap to the pile (see below).
+    """
+    pile = [[400 + i * 16, 300, 30, 30] for i in range(6)]
+    assert zones_for([[370, 300, 30, 30]] + pile)[0] == Zone.RIVER.value
+
+
+def test_lone_tile_clear_of_the_pile_is_its_seat():
+    """The 定缺 case: declaring a void suit puts one tile in front of its owner.
+
+    It is alone, so the density test rejects it — every one of them landed in the pool
+    before this rule existed. What marks it is the distance to the discard pile: in the
+    labelled set a lone side-seat tile sits a median 4.1 own-widths clear of the nearest
+    pool tile, against 0.7 for the pool's own tiles. Adding it took seat_left from 93.8%
+    to 100% cross-validated.
+    """
+    pile = [[600 + i * 16, 300, 30, 30] for i in range(6)]
+    assert zones_for([[10, 300, 30, 30]] + pile)[0] == Zone.SEAT_LEFT.value
+
+
+def test_gap_signal_needs_a_pile_to_measure_against():
+    """With nothing crowded in frame there is no pile, so the gap proves nothing."""
+    spread = [[10, 300, 30, 30]] + [[300 + i * 90, 300, 30, 30] for i in range(6)]
+    assert zones_for(spread)[0] == Zone.RIVER.value
 
 
 def test_high_and_isolated_is_across():
@@ -94,9 +117,11 @@ def test_accuracy_on_labelled_set():
         correct += sum(1 for a, b in zip(predicted, item["zones"]) if a == b)
         total += len(predicted)
     accuracy = correct / total
-    # In-sample score of the shipped thresholds is 94.4%; the honest number is the
-    # image-level cross-validated 93.1%. The floor guards against regressions.
-    assert accuracy >= 0.92, f"zone accuracy dropped to {accuracy:.3f}"
+    # In-sample score of the shipped thresholds is 96.5%; the honest number is the
+    # image-level cross-validated 96.3%. The floor guards against regressions.
+    # (Both moved up ~1 point when 33 label errors were corrected — the algorithm was
+    # being marked down for boxes whose ground truth was wrong.)
+    assert accuracy >= 0.95, f"zone accuracy dropped to {accuracy:.3f}"
 
 
 @pytest.mark.skipif(not LABELS.exists(), reason="zone_labels.json not present")

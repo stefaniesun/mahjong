@@ -241,7 +241,8 @@
    "seat_across",
    "opponent_wall",
    "opponent_wall"
-  ]
+  ],
+  "hit": 29
  },
  {
   "image": "z02.jpg",
@@ -493,7 +494,8 @@
    "opponent_wall",
    "seat_across",
    "river"
-  ]
+  ],
+  "hit": 30
  },
  {
   "image": "z03.jpg",
@@ -779,7 +781,7 @@
    "river",
    "river",
    "river",
-   "opponent_wall",
+   "seat_right",
    "river",
    "river",
    "seat_right",
@@ -849,7 +851,8 @@
    "opponent_wall",
    "opponent_wall",
    "seat_right"
-  ]
+  ],
+  "hit": 43
  },
  {
   "image": "z04.jpg",
@@ -1237,7 +1240,8 @@
    "opponent_wall",
    "opponent_wall",
    "opponent_wall"
-  ]
+  ],
+  "hit": 47
  },
  {
   "image": "z05.jpg",
@@ -1649,7 +1653,8 @@
    "seat_left",
    "opponent_wall",
    "seat_across"
-  ]
+  ],
+  "hit": 50
  },
  {
   "image": "z06.jpg",
@@ -2309,7 +2314,8 @@
    "seat_across",
    "seat_across",
    "opponent_wall"
-  ]
+  ],
+  "hit": 81
  },
  {
   "image": "z07.jpg",
@@ -2676,6 +2682,144 @@
     387,
     80.7,
     32.7
+   ],
+   [
+    863.7,
+    344.5,
+    57.7,
+    38.8
+   ],
+   [
+    501.3,
+    287.1,
+    65.0,
+    29.0
+   ],
+   [
+    864.6,
+    237.4,
+    55.2,
+    28.4
+   ],
+   [
+    750.1,
+    216.2,
+    47.2,
+    26.2
+   ],
+   [
+    877.4,
+    311.2,
+    58.9,
+    34.5
+   ],
+   [
+    642.0,
+    155.1,
+    38.5,
+    19.4
+   ],
+   [
+    563.5,
+    239.1,
+    48.6,
+    27.8
+   ],
+   [
+    695.2,
+    297.6,
+    71.7,
+    26.8
+   ],
+   [
+    643.9,
+    192.4,
+    61.1,
+    17.8
+   ],
+   [
+    803.6,
+    148.9,
+    38.3,
+    19.4
+   ],
+   [
+    765.2,
+    303.2,
+    57.1,
+    33.3
+   ],
+   [
+    842.8,
+    146.3,
+    41.6,
+    20.5
+   ],
+   [
+    505.1,
+    233.2,
+    62.5,
+    21.0
+   ],
+   [
+    866.7,
+    216.4,
+    67.0,
+    21.7
+   ],
+   [
+    983.8,
+    276.2,
+    79.9,
+    21.4
+   ],
+   [
+    962.3,
+    237.5,
+    69.7,
+    20.3
+   ],
+   [
+    582.6,
+    190.4,
+    59.2,
+    16.5
+   ],
+   [
+    327.3,
+    252.1,
+    63.8,
+    21.7
+   ],
+   [
+    877.5,
+    200.5,
+    62.3,
+    18.5
+   ],
+   [
+    357.8,
+    216.4,
+    61.2,
+    17.5
+   ],
+   [
+    973.8,
+    256.8,
+    75.1,
+    19.0
+   ],
+   [
+    803.8,
+    229.4,
+    51.8,
+    22.9
+   ],
+   [
+    340.0,
+    233.3,
+    60.1,
+    19.4
    ]
   ],
   "zones": [
@@ -2719,26 +2863,49 @@
    "seat_across",
    "river",
    "river",
-   "opponent_wall",
+   "river",
+   "river",
+   "seat_across",
+   "river",
+   "river",
+   "seat_across",
+   "seat_across",
+   "river",
+   "river",
+   "river",
+   "river",
+   "river",
+   "river",
+   "river",
+   "river",
+   "river",
+   "river",
    "river",
    "seat_across",
    "river",
    "river",
-   "seat_across",
-   "seat_across",
-   "river",
-   "river",
-   "river",
-   "river",
-   "river",
-   "river",
-   "opponent_wall",
    "river",
    "river",
    "river",
    "river",
    "seat_across",
-   "river"
+   "river",
+   "river",
+   "river",
+   "seat_across",
+   "river",
+   "seat_across",
+   "river",
+   "river",
+   "seat_right",
+   "seat_right",
+   "river",
+   "seat_left",
+   "river",
+   "seat_left",
+   "seat_right",
+   "river",
+   "seat_left"
   ],
   "heuristic": [
    "my_hand",
@@ -2800,8 +2967,32 @@
    "seat_across",
    "opponent_wall",
    "opponent_wall",
+   "river",
+   "river",
+   "river",
+   "river",
+   "river",
+   "river",
+   "river",
+   "river",
+   "river",
+   "river",
+   "river",
+   "river",
+   "river",
+   "river",
+   "river",
+   "river",
+   "river",
+   "river",
+   "river",
+   "river",
+   "river",
+   "river",
+   "river",
    "river"
-  ]
+  ],
+  "hit": 60
  },
  {
   "image": "z08.jpg",
@@ -3213,7 +3404,8 @@
    "river",
    "seat_across",
    "seat_across"
-  ]
+  ],
+  "hit": 50
  },
  {
   "image": "z09.jpg",
@@ -3561,7 +3753,8 @@
    "seat_across",
    "opponent_wall",
    "opponent_wall"
-  ]
+  ],
+  "hit": 42
  },
  {
   "image": "z10.jpg",
@@ -3906,7 +4099,7 @@
    "river",
    "river",
    "river",
-   "opponent_wall",
+   "river",
    "river",
    "river",
    "river",
@@ -3973,7 +4166,8 @@
    "opponent_wall",
    "opponent_wall",
    "opponent_wall"
-  ]
+  ],
+  "hit": 50
  },
  {
   "image": "z11.jpg",
@@ -4385,7 +4579,8 @@
    "river",
    "opponent_wall",
    "opponent_wall"
-  ]
+  ],
+  "hit": 50
  },
  {
   "image": "z12.jpg",
@@ -4797,7 +4992,8 @@
    "opponent_wall",
    "seat_across",
    "opponent_wall"
-  ]
+  ],
+  "hit": 50
  },
  {
   "image": "z13.jpg",
@@ -5185,7 +5381,8 @@
    "opponent_wall",
    "opponent_wall",
    "opponent_wall"
-  ]
+  ],
+  "hit": 47
  },
  {
   "image": "z14.jpg",
@@ -5404,12 +5601,6 @@
     19.2
    ],
    [
-    231.9,
-    636.7,
-    85.8,
-    56.3
-   ],
-   [
     404.9,
     268.1,
     57.5,
@@ -5456,6 +5647,12 @@
     245.6,
     56.9,
     9.5
+   ],
+   [
+    478.7,
+    244.5,
+    59.1,
+    15.5
    ]
   ],
   "zones": [
@@ -5494,7 +5691,6 @@
    "seat_left",
    "river",
    "river",
-   "seat_left",
    "river",
    "river",
    "river",
@@ -5502,6 +5698,7 @@
    "seat_right",
    "seat_across",
    "seat_across",
+   "river",
    "river"
   ],
   "heuristic": [
@@ -5540,7 +5737,6 @@
    "opponent_wall",
    "seat_across",
    "seat_across",
-   "seat_left",
    "seat_across",
    "seat_across",
    "seat_across",
@@ -5548,8 +5744,10 @@
    "opponent_wall",
    "opponent_wall",
    "opponent_wall",
-   "opponent_wall"
-  ]
+   "opponent_wall",
+   "river"
+  ],
+  "hit": 44
  },
  {
   "image": "z15.jpg",
@@ -5929,7 +6127,8 @@
    "opponent_wall",
    "opponent_wall",
    "opponent_wall"
-  ]
+  ],
+  "hit": 46
  },
  {
   "image": "z16.jpg",
@@ -6134,6 +6333,12 @@
     196.1,
     35.7,
     10.9
+   ],
+   [
+    672.1,
+    280.5,
+    56.9,
+    17.9
    ]
   ],
   "zones": [
@@ -6169,7 +6374,8 @@
    "river",
    "seat_across",
    "seat_across",
-   "seat_across"
+   "seat_across",
+   "river"
   ],
   "heuristic": [
    "my_hand",
@@ -6204,8 +6410,10 @@
    "seat_right",
    "opponent_wall",
    "opponent_wall",
-   "opponent_wall"
-  ]
+   "opponent_wall",
+   "river"
+  ],
+  "hit": 33
  },
  {
   "image": "z17.jpg",
@@ -6410,19 +6618,19 @@
    "my_hand",
    "my_hand",
    "my_hand",
-   "seat_left",
-   "my_hand",
-   "seat_left",
    "my_hand",
    "my_hand",
    "my_hand",
    "my_hand",
-   "river",
+   "my_hand",
+   "my_hand",
    "my_hand",
    "river",
    "my_hand",
    "river",
-   "seat_left",
+   "my_hand",
+   "river",
+   "my_hand",
    "river",
    "river",
    "river",
@@ -6473,7 +6681,8 @@
    "opponent_wall",
    "opponent_wall",
    "opponent_wall"
-  ]
+  ],
+  "hit": 32
  },
  {
   "image": "z18.jpg",
@@ -6717,7 +6926,8 @@
    "opponent_wall",
    "river",
    "river"
-  ]
+  ],
+  "hit": 29
  },
  {
   "image": "z19.jpg",
@@ -7041,7 +7251,8 @@
    "opponent_wall",
    "opponent_wall",
    "opponent_wall"
-  ]
+  ],
+  "hit": 39
  },
  {
   "image": "z20.jpg",
@@ -7371,7 +7582,7 @@
    "river",
    "river",
    "river",
-   "opponent_wall",
+   "river",
    "river",
    "river",
    "river",
@@ -7429,6 +7640,7 @@
    "river",
    "seat_across",
    "river"
-  ]
+  ],
+  "hit": 47
  }
 ]
