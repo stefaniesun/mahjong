@@ -6,7 +6,106 @@
    "video": "clips_full/clip01_7507945925261200.mp4",
    "source_start": 285.0,
    "duration": 30.0,
-   "events": []
+   "events": [
+    {
+     "who": "me",
+     "type": "discard",
+     "tile": "w1",
+     "from": null,
+     "note": ""
+    },
+    {
+     "who": "right",
+     "type": "discard",
+     "tile": "b4",
+     "from": null,
+     "note": ""
+    },
+    {
+     "who": "across",
+     "type": "discard",
+     "tile": "b5",
+     "from": null,
+     "note": ""
+    },
+    {
+     "who": "left",
+     "type": "discard",
+     "tile": "w8",
+     "from": null,
+     "note": ""
+    },
+    {
+     "who": "me",
+     "type": "discard",
+     "tile": "b3",
+     "from": null,
+     "note": ""
+    },
+    {
+     "who": "right",
+     "type": "discard",
+     "tile": "b8",
+     "from": null,
+     "note": ""
+    },
+    {
+     "who": "across",
+     "type": "discard",
+     "tile": "b3",
+     "from": null,
+     "note": ""
+    },
+    {
+     "who": "left",
+     "type": "discard",
+     "tile": "w9",
+     "from": null,
+     "note": ""
+    },
+    {
+     "who": "me",
+     "type": "discard",
+     "tile": "b7",
+     "from": null,
+     "note": ""
+    },
+    {
+     "who": "right",
+     "type": "discard",
+     "tile": "b5",
+     "from": null,
+     "note": ""
+    },
+    {
+     "who": "across",
+     "type": "discard",
+     "tile": "b7",
+     "from": null,
+     "note": ""
+    },
+    {
+     "who": "left",
+     "type": "discard",
+     "tile": "b2",
+     "from": null,
+     "note": ""
+    },
+    {
+     "who": "me",
+     "type": "discard",
+     "tile": "t2",
+     "from": null,
+     "note": ""
+    },
+    {
+     "who": "right",
+     "type": "discard",
+     "tile": "b7",
+     "from": null,
+     "note": ""
+    }
+   ]
   },
   "clip02_7499348207492304": {
    "video": "clips_full/clip02_7499348207492304.mp4",
