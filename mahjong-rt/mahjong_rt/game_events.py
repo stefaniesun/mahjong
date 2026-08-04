@@ -75,6 +75,16 @@ class GameEventConfig:
     min_gap_s: float = 0.6
     # Melds are read straight from the zone stage, which already groups them.
     detect_melds: bool = True
+    # Occupancy from raw detections. Correct in principle — a tile the detector saw all
+    # along is not new — but a discard lands *on* the pile, so its cell has usually been
+    # seen already. Measured on clip01 this removes every discard, true ones included.
+    use_detection_occupancy: bool = False
+    # Frames to keep watching a cell before naming what landed in it. The moment a cell
+    # fills is the moment the tile arrives, but the voter has not settled on what it is
+    # yet — read then, the label is whatever the first noisy frames said, or a
+    # neighbour's. The event keeps the arrival time and takes the majority label from
+    # this window.
+    label_window: int = 30
     start_player: str | None = None   # None = unknown until a meld anchors it
 
 
@@ -93,6 +103,7 @@ class GameEventExtractor:
         self._pending: dict[tuple[int, int], dict[str, Any]] = {}
         self._ever_detected: set[tuple[int, int]] = set()
         self._detected_now: set[tuple[int, int]] = set()
+        self._naming: list[dict[str, Any]] = []
 
     # --- geometry -------------------------------------------------------------
 
@@ -160,7 +171,9 @@ class GameEventExtractor:
             live[self._cell(tile["bbox"])] = tile
 
         for cell, tile in live.items():
-            if cell in self._occupied or cell in self._ever_detected:
+            if cell in self._occupied:
+                continue
+            if self.config.use_detection_occupancy and cell in self._ever_detected:
                 continue
             entry = self._pending.setdefault(cell, {"label": tile["label"], "count": 0, "ts": ts, "frame": frame_idx})
             entry["count"] += 1
@@ -174,12 +187,12 @@ class GameEventExtractor:
             if entry["ts"] - self._last_ts < self.config.min_gap_s:
                 continue                            # one landing seen twice
             self._last_ts = entry["ts"]
-            player = self._turn or "unknown"
-            produced.append(
-                GameEvent(seq=len(self.events) + len(produced), event_type="discard",
-                          player=player, tile=entry["label"], ts=entry["ts"], frame_idx=entry["frame"])
-            )
+            event = GameEvent(seq=0, event_type="discard", player=self._turn or "unknown",
+                              tile=entry["label"], ts=entry["ts"], frame_idx=entry["frame"])
+            # The turn advances now — attribution depends on the order things landed in,
+            # not on how long it takes to read them.
             self._turn = self._next_turn()
+            self._naming.append({"event": event, "cell": cell, "votes": {}, "left": self.config.label_window})
 
         for cell in list(self._pending):
             if cell not in live:
@@ -190,6 +203,8 @@ class GameEventExtractor:
         self._ever_detected |= self._detected_now
         self._detected_now = set()
 
+        produced += self._name_pending(live)
+
         if warm:
             # Warm-up still establishes occupancy, so the pool present at the start is
             # never mistaken for something thrown during the clip.
@@ -198,6 +213,43 @@ class GameEventExtractor:
 
         self.events += produced
         return produced
+
+    def flush(self) -> list[GameEvent]:
+        """Close every open naming window. Call once the stream ends.
+
+        An arrival still inside its window has been detected but not yet named; without
+        this the last second or two of a clip is silently dropped.
+        """
+        done = self._name_pending({}, force=True)
+        self.events += done
+        return done
+
+    def _name_pending(self, live: dict[tuple[int, int], dict[str, Any]], force: bool = False) -> list[GameEvent]:
+        """Hold each detected arrival open for a while, then name it by majority.
+
+        Reading the label at the instant a cell fills gets it wrong most of the time —
+        2 of 13 on clip01. The tile has only just landed, and the voter needs several
+        clean views before it settles. Waiting costs nothing that matters: the event
+        keeps the timestamp of the arrival, and downstream the engine cares about the
+        order events happened in, not the order they were reported.
+        """
+        done: list[GameEvent] = []
+        for slot in list(self._naming):
+            tile = live.get(slot["cell"])
+            if tile and tile.get("label"):
+                slot["votes"][tile["label"]] = slot["votes"].get(tile["label"], 0) + 1
+            slot["left"] -= 1
+            if slot["left"] > 0 and not force:
+                continue
+            event = slot["event"]
+            if slot["votes"]:
+                best = max(slot["votes"].items(), key=lambda kv: kv[1])
+                event.tile = best[0]
+                event.confidence = best[1] / sum(slot["votes"].values())
+            event.seq = len(self.events) + len(done)
+            done.append(event)
+            self._naming.remove(slot)
+        return done
 
     def _scan_melds(self, tiles: Iterable[dict[str, Any]], ts: float, frame_idx: int) -> list[GameEvent]:
         """A seat's zone gaining a group of three or four identical tiles is a claim.
@@ -240,4 +292,5 @@ def extract(frames: Iterable[tuple[dict[str, Any], Any]], config: GameEventConfi
     extractor = GameEventExtractor(config)
     for summary, homography in frames:
         extractor.add_frame(summary, homography)
+    extractor.flush()
     return extractor.events

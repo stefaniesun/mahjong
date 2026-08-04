@@ -38,6 +38,7 @@ def test_warmup_does_not_report_the_pool_already_on_the_table():
     existing = [river("w1", 100), river("b4", 200), river("t9", 300)]
     for i in range(8):
         ex.add_frame(summary(existing, ts=i * 0.1, frame=i))
+    ex.flush()
     assert ex.events == []
 
 
@@ -48,6 +49,7 @@ def test_a_new_tile_after_warmup_is_a_discard():
         ex.add_frame(summary(existing, ts=i * 0.1, frame=i))
     for i in range(5, 10):
         ex.add_frame(summary(existing + [river("b4", 400)], ts=i * 0.5, frame=i))
+    ex.flush()
     assert [(e.event_type, e.tile, e.player) for e in ex.events] == [("discard", "b4", "me")]
 
 
@@ -58,6 +60,7 @@ def test_turn_advances_counter_clockwise():
     for i, (label, x) in enumerate([("w1", 100), ("b4", 300), ("t9", 500), ("w5", 700)]):
         tiles = tiles + [river(label, x)]
         ex.add_frame(summary(tiles, ts=1.0 + i, frame=i + 1))
+    ex.flush()
     assert [e.player for e in ex.events] == ["me", "right", "across", "left"]
 
 
@@ -66,8 +69,10 @@ def test_a_pong_reanchors_the_turn():
     ex = GameEventExtractor(GameEventConfig(warmup_frames=1, settle_frames=1, min_gap_s=0.0, start_player="me"))
     ex.add_frame(summary([], ts=0.0, frame=0))
     ex.add_frame(summary(meld("t3", "seat_across", 400), ts=1.0, frame=1))
+    ex.flush()
     assert [(e.event_type, e.player, e.tile) for e in ex.events] == [("pong", "across", "t3")]
     ex.add_frame(summary(meld("t3", "seat_across", 400) + [river("w9", 100)], ts=2.0, frame=2))
+    ex.flush()
     assert ex.events[-1].event_type == "discard"
     assert ex.events[-1].player == "across", "碰了之后该由碰的那家出牌"
 
@@ -77,6 +82,7 @@ def test_a_settled_cell_is_not_reported_twice():
     ex.add_frame(summary([], ts=0.0, frame=0))
     for i in range(10):
         ex.add_frame(summary([river("b4", 400)], ts=1.0 + i, frame=i + 1))
+    ex.flush()
     assert len(ex.events) == 1
 
 
@@ -87,14 +93,17 @@ def test_flicker_never_settles_into_an_event():
     for i in range(6):
         tiles = [river("b4", 400)] if i % 2 == 0 else []
         ex.add_frame(summary(tiles, ts=1.0 + i, frame=i + 1))
+    ex.flush()
     assert ex.events == []
 
 
 def test_detections_mark_a_cell_as_already_occupied():
     """A tile the detector saw all along is not new, however late it gets confirmed."""
-    ex = GameEventExtractor(GameEventConfig(warmup_frames=1, settle_frames=2, start_player="me"))
+    ex = GameEventExtractor(GameEventConfig(warmup_frames=1, settle_frames=2, start_player="me",
+                                            use_detection_occupancy=True))
     boxes = np.array([[400.0, 300.0, 440.0, 340.0]], dtype=np.float32)
     ex.add_frame(summary([], ts=0.0, frame=0), detections=boxes)
     for i in range(5):
         ex.add_frame(summary([river("b4", 400)], ts=1.0 + i, frame=i + 1), detections=boxes)
+    ex.flush()
     assert ex.events == []

@@ -40,7 +40,10 @@ GAP = -0.6      # cost of leaving an event unmatched; below the 0 a bad pair wou
 def similarity(pred: dict, truth: dict) -> float:
     """How much of one event agrees with another. 1.0 is identical."""
     if pred["event_type"] != truth.get("type"):
-        return -1.0
+        # Never pair different kinds of event. It has to be worse than two gaps, or the
+        # aligner will happily marry a spurious pong to a missed discard and report both
+        # as "matched but different".
+        return -99.0
     score = 0.0
     if truth.get("tile") is None:
         score += 0.6                                  # unreadable in the video: no evidence either way
@@ -80,6 +83,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--testset", type=Path, default=TESTSET)
     ap.add_argument("--config", type=Path, default=Path(__file__).resolve().parents[1] / "configs" / "pipeline.yaml")
+    ap.add_argument("--recordings", type=str, default="recordings2", help="Recording folder under the testset.")
     ap.add_argument("--clip", type=str, default=None, help="Only this clip.")
     ap.add_argument("--verbose", action="store_true", help="Print the alignment.")
     args = ap.parse_args(argv)
@@ -92,7 +96,7 @@ def main(argv=None) -> int:
         truths = clip.get("events", [])
         if not truths or (args.clip and args.clip not in name):
             continue
-        path = args.testset / "recordings2" / f"{name}.npz"
+        path = args.testset / args.recordings / f"{name}.npz"
         if not path.exists():
             print(f"{name}: 缺录制 {path.name}")
             continue
@@ -108,6 +112,7 @@ def main(argv=None) -> int:
         extractor = GameEventExtractor(GameEventConfig(start_player=truths[0].get("who")))
         for summary, frame in zip(summaries, recording.frames):
             extractor.add_frame(summary, frame.homography, detections=frame.boxes)
+        extractor.flush()
         preds = [e.to_dict() for e in extractor.events]
 
         pairs = align(preds, truths)
