@@ -1,31 +1,24 @@
 {
-  "clips": {
-    "clip01_7507945925261200": {
-      "events": [
-        {
-          "tile": "w1",
-          "t": 0.0,
-          "note": "示例：把这条删掉，按指引填真实事件"
-        }
-      ]
-    },
-    "clip02_7499348207492304": {
-      "events": [
-        {
-          "tile": "w1",
-          "t": 0.0,
-          "note": "示例：把这条删掉，按指引填真实事件"
-        }
-      ]
-    },
-    "clip03_7504292741762927": {
-      "events": [
-        {
-          "tile": "w1",
-          "t": 0.0,
-          "note": "示例：把这条删掉，按指引填真实事件"
-        }
-      ]
-    }
+ "format": "mahjong_events_gt/1",
+ "_guide": "填写说明见同目录 事件真值怎么填.md；填完跑 python mahjong-rt/scripts/check_events_gt.py 自检",
+ "clips": {
+  "clip01_7507945925261200": {
+   "video": "clips_full/clip01_7507945925261200.mp4",
+   "source_start": 285.0,
+   "duration": 30.0,
+   "events": []
+  },
+  "clip02_7499348207492304": {
+   "video": "clips_full/clip02_7499348207492304.mp4",
+   "source_start": 165.0,
+   "duration": 30.0,
+   "events": []
+  },
+  "clip03_7504292741762927": {
+   "video": "clips_full/clip03_7504292741762927.mp4",
+   "source_start": 345.0,
+   "duration": 30.0,
+   "events": []
   }
+ }
 }
