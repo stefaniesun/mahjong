@@ -1,7 +1,7 @@
 """Table region assignment (Phase 4 task 6).
 
-Pure geometry, no model — but the thresholds come from 899 hand-labelled boxes rather
-than from intuition. Zones are what turn a bag of recognised tiles into game meaning:
+Geometry plus one class-based rule, no model — and the thresholds come from 923
+hand-labelled boxes rather than from intuition. Zones are what turn a bag of recognised tiles into game meaning:
 the engine's VisionSnapshot keys rivers and melds by player, so "whose tile is this"
 has to be answered before anything downstream can use the output.
 
@@ -40,7 +40,17 @@ tile sits a median 4.1 own-widths clear of the nearest pool tile, against 0.7 fo
 pool's own tiles. The feature needs no labels: the pool is by definition whatever is
 crowded. seat_left went 93.8% -> 100%, total to **96.3% cross-validated**.
 
-Per-zone recall: hand 100%, river 97.6%, left 100%, right 96.0%, across 72.3%.
+**Melds are the seventh, and the only one that looks at what a tile *is*.** 碰/杠 lays
+three or four identical tiles in a tidy row in front of their owner. The pool throws up
+three of a kind side by side too, but scattered: measured across the labelled set, an
+across meld's row alignment (std of y over mean height) is 0.043 against the pool's 1.28,
+and the two do not overlap. seat_across had survived six versions at 71-72% because a
+meld's three tiles all fail the position test together — which is also why cluster voting
+could not help, a unanimous group of wrong answers only votes itself wronger. Overriding
+the whole run at once took it to **92.3%**, and cost the pool nothing: **97.9% total,
+cross-validated**.
+
+Per-zone recall: hand 100%, left 100%, river 97.6%, right 96.0%, across 92.3%.
 
 A caution on all of these numbers: they moved about a point when 33 label errors were
 found and fixed (`scripts/audit_zone_labels.py`). Earlier figures in this file's history
@@ -56,7 +66,8 @@ What the labels showed (median, and 10-90% spread of normalised x):
 
 Left and right sit almost entirely outside the pool's horizontal spread, so a lateral
 cut separates them cleanly. Across overlaps the pool horizontally and is told apart by
-being higher and smaller — which is why it is the weakest of the five.
+being higher and smaller — which is why position alone was never enough for it, and why
+the meld rule above is what finally moved it.
 
 Size is expressed relative to the frame's own median tile, never in pixels: tile size
 tracks depth (short side runs 15.9px to 81.7px as ny runs 0.39 to 0.81), so a ratio
@@ -106,6 +117,15 @@ class ZoneConfig:
     cluster_link: float = 1.2      # same cluster if centres are within this many mean widths
     cluster_max_frac: float = 0.35  # clusters larger than this share of the frame are the
                                     # pool itself, which spans zones — leave them alone
+    # 碰/杠: three or four identical tiles laid in a neat row in front of their owner.
+    # This is the only signal here that uses what the tile *is* rather than where it sits,
+    # and it is what finally moved seat_across. The pool also throws up three of a kind
+    # side by side, but scattered: an across meld's row alignment (std of y over mean
+    # height) is 0.043 against the pool's 1.28, and the two do not overlap at all in the
+    # labelled set. Requires labels; without them the rule simply does not fire.
+    meld_link: float = 1.6         # same run if same class and centres within this many widths
+    meld_max_align: float = 0.12   # std of y over mean height — above this it is scatter
+    meld_max_ny: float = 0.35      # a run lower than this is not somebody's meld across the table
 
 
 def analyze_layout(
@@ -113,8 +133,12 @@ def analyze_layout(
     frame_w: int,
     frame_h: int,
     config: ZoneConfig,
+    labels: Sequence[str | None] | None = None,
 ) -> tuple[list[str], dict]:
-    """boxes: xywh in pixels. Returns (zone per box, debug info)."""
+    """boxes: xywh in pixels. labels: tile class per box, or None where unknown.
+
+    Returns (zone per box, debug info).
+    """
     n = len(boxes)
     if not config.enabled or n == 0:
         return [Zone.UNKNOWN.value] * n, {}
@@ -206,10 +230,73 @@ def analyze_layout(
             for i in members:
                 zones[i] = winner
 
-    return zones, {"median_short": round(median, 1), "counts": {z: zones.count(z) for z in set(zones)}}
+    # --- Melds. A run of identical tiles in a tidy row is a 碰 or 杠, which is always in
+    # front of a player and never in the pool. Run last and as an override, not a vote:
+    # every tile of a misplaced meld is wrong together, so voting among them only makes
+    # the error unanimous. This is what moved seat_across 72.3% -> 92.3%, and it costs
+    # the pool nothing.
+    melds = 0
+    if labels is not None and n >= 3 and config.meld_max_align > 0:
+        by_class: dict[str, list[int]] = {}
+        for i, label in enumerate(labels):
+            if label:
+                by_class.setdefault(label, []).append(i)
+        for members in by_class.values():
+            if len(members) < 3:
+                continue
+            parent = {i: i for i in members}
+
+            def root(i: int) -> int:
+                while parent[i] != i:
+                    parent[i] = parent[parent[i]]
+                    i = parent[i]
+                return i
+
+            for a_pos, i in enumerate(members):
+                for j in members[a_pos + 1:]:
+                    if float(dist[i, j]) < config.meld_link * (arr[i, 2] + arr[j, 2]) / 2:
+                        ri, rj = root(i), root(j)
+                        if ri != rj:
+                            parent[ri] = rj
+            runs: dict[int, list[int]] = {}
+            for i in members:
+                runs.setdefault(root(i), []).append(i)
+            for run in runs.values():
+                if len(run) < 3:
+                    continue
+                heights = arr[run, 3]
+                align = float(np.std(cy[run]) / max(float(np.mean(heights)), 1e-6))
+                if align > config.meld_max_align:
+                    continue  # scattered — three of a kind that happen to land together
+                if sum(zones[i] == Zone.MY_HAND.value for i in run) * 2 > len(run):
+                    continue  # the player's own hand is already a tidy row of its own
+                mean_ny = float(np.mean(cy[run])) / max(frame_h, 1)
+                if mean_ny > config.meld_max_ny:
+                    continue
+                mean_nx = float(np.mean(cx[run])) / max(frame_w, 1)
+                if mean_nx <= config.left_max_nx:
+                    seat = Zone.SEAT_LEFT.value
+                elif mean_nx >= config.right_min_nx:
+                    seat = Zone.SEAT_RIGHT.value
+                else:
+                    seat = Zone.SEAT_ACROSS.value
+                for i in run:
+                    zones[i] = seat
+                melds += 1
+
+    debug = {"median_short": round(median, 1), "counts": {z: zones.count(z) for z in set(zones)}}
+    if labels is not None:
+        debug["melds"] = melds
+    return zones, debug
 
 
-def assign_zones(boxes: Sequence[Sequence[float]], frame_w: int, frame_h: int, config: ZoneConfig) -> list[str]:
+def assign_zones(
+    boxes: Sequence[Sequence[float]],
+    frame_w: int,
+    frame_h: int,
+    config: ZoneConfig,
+    labels: Sequence[str | None] | None = None,
+) -> list[str]:
     """Thin wrapper kept for the pipeline's call site."""
-    zones, _ = analyze_layout(boxes, frame_w, frame_h, config)
+    zones, _ = analyze_layout(boxes, frame_w, frame_h, config, labels)
     return zones

@@ -19,11 +19,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from mahjong_rt.events import Zone
 from mahjong_rt.zones import ZoneConfig, analyze_layout
 
-LABELS = Path(__file__).resolve().parents[2] / "output" / "zone_annotation" / "zone_labels.json"
+LABELS = Path(__file__).resolve().parents[2] / "output" / "zone_annotation" / "zone_labels_with_class.json"
 
 
-def zones_for(boxes, w=1280, h=720, config=None):
-    return analyze_layout(boxes, w, h, config or ZoneConfig())[0]
+def zones_for(boxes, w=1280, h=720, config=None, labels=None):
+    return analyze_layout(boxes, w, h, config or ZoneConfig(), labels)[0]
 
 
 def test_disabled_returns_unknown():
@@ -108,33 +108,69 @@ def test_size_is_relative_not_absolute():
     assert zones_for(boxes, 1280, 720) == zones_for(half, 640, 360)
 
 
-@pytest.mark.skipif(not LABELS.exists(), reason="zone_labels.json not present")
+@pytest.mark.skipif(not LABELS.exists(), reason="zone_labels_with_class.json not present")
 def test_accuracy_on_labelled_set():
     data = json.loads(LABELS.read_text(encoding="utf-8"))
     correct = total = 0
     for item in data:
-        predicted = zones_for(item["boxes"], item["w"], item["h"])
+        predicted = zones_for(item["boxes"], item["w"], item["h"], labels=item.get("cls"))
         correct += sum(1 for a, b in zip(predicted, item["zones"]) if a == b)
         total += len(predicted)
     accuracy = correct / total
-    # In-sample score of the shipped thresholds is 96.5%; the honest number is the
-    # image-level cross-validated 96.3%. The floor guards against regressions.
+    # In-sample score of the shipped thresholds is 98.3%; the honest number is the
+    # image-level cross-validated 97.9%. The floor guards against regressions.
     # (Both moved up ~1 point when 33 label errors were corrected — the algorithm was
     # being marked down for boxes whose ground truth was wrong.)
-    assert accuracy >= 0.95, f"zone accuracy dropped to {accuracy:.3f}"
+    assert accuracy >= 0.97, f"zone accuracy dropped to {accuracy:.3f}"
 
 
-@pytest.mark.skipif(not LABELS.exists(), reason="zone_labels.json not present")
+@pytest.mark.skipif(not LABELS.exists(), reason="zone_labels_with_class.json not present")
 def test_beats_river_only_baseline():
     """Guard the specific way v1-v3 failed: losing to 'call everything river'."""
     data = json.loads(LABELS.read_text(encoding="utf-8"))
     correct = baseline = total = 0
     for item in data:
-        predicted = zones_for(item["boxes"], item["w"], item["h"])
+        predicted = zones_for(item["boxes"], item["w"], item["h"], labels=item.get("cls"))
         correct += sum(1 for a, b in zip(predicted, item["zones"]) if a == b)
         baseline += sum(1 for z in item["zones"] if z == Zone.RIVER.value)
         total += len(predicted)
     assert correct > baseline * 1.15
+
+
+def test_meld_run_is_seated_together():
+    """碰: three identical tiles in a tidy row belong to a player, never to the pool.
+
+    This is the rule that moved seat_across 72.3% -> 92.3%. Before it, all three tiles of
+    a meld scored as pool together — which is also why cluster voting could not help, a
+    unanimous group of wrong answers votes itself wronger.
+    """
+    meld = [[560 + i * 34, 180, 32, 20] for i in range(3)]          # neat row, high, central
+    pool = [[500 + (i % 5) * 40, 300 + (i // 5) * 37, 34, 22] for i in range(15)]
+    result = zones_for(meld + pool, labels=["t9"] * 3 + [f"b{i % 9 + 1}" for i in range(15)])
+    assert result[:3] == [Zone.SEAT_ACROSS.value] * 3
+
+
+def test_scattered_triple_is_not_a_meld():
+    """Three of a kind land side by side in the pool too — what differs is the tidiness."""
+    scattered = [[560, 300, 32, 20], [600, 336, 32, 20], [575, 372, 32, 20]]
+    pool = [[500 + (i % 5) * 40, 290 + (i // 5) * 37, 34, 22] for i in range(15)]
+    result = zones_for(scattered + pool, labels=["t9"] * 3 + [f"b{i % 9 + 1}" for i in range(15)])
+    assert result[:3] == [Zone.RIVER.value] * 3
+
+
+def test_meld_rule_is_inert_without_labels():
+    """Zones must still work when classification is unavailable — the rule just won't fire."""
+    meld = [[560 + i * 34, 180, 32, 20] for i in range(3)]
+    pool = [[500 + (i % 5) * 40, 300 + (i // 5) * 37, 34, 22] for i in range(15)]
+    assert zones_for(meld + pool) == zones_for(meld + pool, labels=None)
+
+
+def test_own_hand_row_is_not_stolen_by_the_meld_rule():
+    """The player's own hand is the tidiest row on the table; it must stay theirs."""
+    hand = [[300 + i * 90, 600, 85, 85] for i in range(4)]
+    pool = [[500 + (i % 5) * 40, 300 + (i // 5) * 37, 34, 22] for i in range(10)]
+    result = zones_for(hand + pool, labels=["w3"] * 4 + [f"b{i % 9 + 1}" for i in range(10)])
+    assert result[:4] == [Zone.MY_HAND.value] * 4
 
 
 def test_cluster_smoothing_rescues_boundary_tile():

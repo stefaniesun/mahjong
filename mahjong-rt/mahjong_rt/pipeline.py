@@ -190,7 +190,16 @@ class Pipeline:
         self.timings["classify"].append(time.perf_counter() - t0)
 
         xywh = [[float(b[0]), float(b[1]), float(b[2] - b[0]), float(b[3] - b[1])] for b in track_boxes]
-        zones = assign_zones(xywh, frame.shape[1], frame.shape[0], self.zone_config)
+        # The meld rule needs to know what each tile is. Prefer the state machine's
+        # settled label over this frame's raw guess: it is what the rest of the system
+        # believes, and it survives the frames where classification is skipped, so the
+        # rule does not blink on and off with classify_every.
+        labels = [
+            (self.state_machine.tiles[t.track_id].label if t.track_id in self.state_machine.tiles else None)
+            or (observations[i].label if observations[i] is not None else None)
+            for i, t in enumerate(tracks)
+        ]
+        zones = assign_zones(xywh, frame.shape[1], frame.shape[0], self.zone_config, labels)
 
         events = self.state_machine.update(
             [(t.track_id, xywh[i], observations[i], zones[i]) for i, t in enumerate(tracks)],

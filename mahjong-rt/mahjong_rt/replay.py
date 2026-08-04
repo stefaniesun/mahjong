@@ -66,7 +66,12 @@ def replay(
                 )
             )
 
-        zones = assign_zones(xywh, recording.frame_width, recording.frame_height, zone_config)
+        labels = [
+            (machine.tiles[t.track_id].label if t.track_id in machine.tiles else None)
+            or (observations[i].label if observations[i] is not None else None)
+            for i, t in enumerate(tracks)
+        ]
+        zones = assign_zones(xywh, recording.frame_width, recording.frame_height, zone_config, labels)
         frame_events = machine.update(
             [(t.track_id, xywh[i], observations[i], zones[i]) for i, t in enumerate(tracks)],
             frame_idx=record.frame_index,
