@@ -34,12 +34,20 @@ def check_clip(name: str, clip: dict) -> tuple[list[str], list[str], dict]:
     events = clip.get("events", [])
     duration = float(clip.get("duration", 30.0))
 
+    # `t` is optional. Order alone still measures whether the right events were found in
+    # the right sequence, which is the question that matters; only confirmation latency
+    # needs real timestamps, and that has never been measured anyway. Events without a
+    # time are matched to predictions by sequence alignment instead, so their order in
+    # the list is significant.
+    timed = [e for e in events if isinstance(e.get("t"), (int, float))]
+
     for i, e in enumerate(events):
-        where = f"{name} 第{i + 1}条 (t={e.get('t')})"
+        stamp = f"t={e.get('t')}" if e.get("t") is not None else f"第{i + 1}条"
+        where = f"{name} {stamp}"
         t = e.get("t")
-        if not isinstance(t, (int, float)):
-            errors.append(f"{where}: t 不是数字")
-        elif not (0 <= t <= duration + 0.5):
+        if t is not None and not isinstance(t, (int, float)):
+            errors.append(f"{where}: t 要么是数字，要么省略/写 null")
+        elif isinstance(t, (int, float)) and not (0 <= t <= duration + 0.5):
             errors.append(f"{where}: t={t} 超出片段范围 0~{duration}")
         if e.get("who") not in SEATS:
             errors.append(f"{where}: who={e.get('who')!r} 不是 {'/'.join(SEATS)}")
@@ -59,24 +67,27 @@ def check_clip(name: str, clip: dict) -> tuple[list[str], list[str], dict]:
         elif frm not in (None, ""):
             warns.append(f"{where}: {e.get('type')} 不该有 from={frm!r}")
 
-    ordered = sorted(range(len(events)), key=lambda i: events[i].get("t", 0))
-    if ordered != list(range(len(events))):
-        warns.append(f"{name}: 事件没有按时间排序（不影响使用，但自己检查时容易漏）")
+    if timed:
+        ts = [e["t"] for e in timed]
+        if ts != sorted(ts):
+            errors.append(f"{name}: 带时间的事件顺序和时间对不上，先确认哪个是对的")
+        if len(timed) < len(events):
+            print(f"  说明  {name}: {len(timed)}/{len(events)} 条有时间，其余按列表顺序对齐")
+    elif events:
+        print(f"  说明  {name}: 全部按列表顺序对齐（没有时间，确认延迟测不了）")
 
     # Turn order. Discards go counter-clockwise; a pong/kong jumps the turn to the
     # claimer. Anything else means a missed event — usually a discard that was not seen.
     turn = None
-    seq = sorted(events, key=lambda e: e.get("t", 0))
-    for e in seq:
+    for e in events:   # list order is the sequence; times, where present, agree with it
         who, kind = e.get("who"), e.get("type")
         if who not in SEATS:
             continue
         if kind == "discard":
             if turn is not None and who != turn:
                 gap = (SEATS.index(who) - SEATS.index(turn)) % 4
-                warns.append(
-                    f"{name} t={e.get('t')}: 轮到 {turn} 却是 {who} 打牌，中间可能漏了 {gap} 条"
-                )
+                at = f"t={e.get('t')}" if e.get("t") is not None else f"第{events.index(e) + 1}条"
+                warns.append(f"{name} {at}: 轮到 {turn} 却是 {who} 打牌，中间可能漏了 {gap} 条")
             turn = SEATS[(SEATS.index(who) + 1) % 4]
         elif kind in {"pong", "kong"}:
             # The claimer discards next, so the turn lands on them rather than moving on.
