@@ -77,6 +77,7 @@ def replay(
             frame_idx=record.frame_index,
             ts=record.timestamp,
             stats={"detections": int(len(record.boxes)), "tracks": len(tracks)},
+            homography=record.homography,
         )
         events.extend(asdict(e) for e in frame_events)
 

@@ -211,6 +211,7 @@ class Pipeline:
                 "gmc_ok": self.tracker.stats["gmc_ok"],
                 "gmc_fail": self.tracker.stats["gmc_fail"],
             },
+            homography=self.tracker.last_homography,
         )
         self.timings["total"].append(time.perf_counter() - start)
         self.frame_idx += 1
