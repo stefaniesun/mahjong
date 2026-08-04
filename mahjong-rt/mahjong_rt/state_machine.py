@@ -25,7 +25,7 @@ class TileTrack:
     zone: str = Zone.UNKNOWN.value
     frames_tracked: int = 0
     frames_missing: int = 0
-    zone_votes: dict[str, int] = field(default_factory=dict)
+    zone_votes: dict[str, float] = field(default_factory=dict)
     voter: TrackVoter | None = None
 
 
@@ -37,10 +37,12 @@ class StateMachine:
         occluded_after: int = 2,
         lost_after: int = 30,
         emit_frame_summary: bool = True,
+        zone_evidence_weight: float = 2.0,
     ) -> None:
         self.voter_kwargs = voter_kwargs or {}
         self.occluded_after = occluded_after
         self.lost_after = lost_after
+        self.zone_evidence_weight = zone_evidence_weight
         self.emit_frame_summary = emit_frame_summary
         self.tiles: dict[int, TileTrack] = {}
 
@@ -72,9 +74,23 @@ class StateMachine:
             if tile.state in (TileState.OCCLUDED,):
                 tile.state = TileState.CONFIRMED if tile.label else TileState.TENTATIVE
 
-            # Zone is decided by majority over the track's life, not per frame — a tile
-            # near a boundary would otherwise flicker between zones every frame.
-            tile.zone_votes[zone] = tile.zone_votes.get(zone, 0) + 1
+            # Zone is decided by a weighted majority over the track's life, not per frame:
+            # a tile near a boundary would otherwise flicker between zones every frame.
+            #
+            # The weighting is asymmetric because the evidence is. `river` is what the
+            # zone rule returns when nothing else was proven — including the frames where
+            # a meld went unrecognised because one of its three tiles was missed, or where
+            # the gap to the pile could not be measured. A seat call, by contrast, needed
+            # positive evidence to happen at all. Counting the two the same lets frames
+            # that saw nothing outvote frames that saw something.
+            #
+            # Simulated over the labelled set (15 views per still, 15% of tiles missed,
+            # boxes jittered, 2% of classes flipped): 96.7% per frame, 97.4% with a plain
+            # majority, 98.4% at weight 2. The advantage inverts past ~45% missed tiles,
+            # where seat calls become noise themselves — hence 2 rather than the 3 that
+            # scores best at the current miss rate.
+            weight = 1.0 if zone in (Zone.RIVER.value, Zone.UNKNOWN.value) else self.zone_evidence_weight
+            tile.zone_votes[zone] = tile.zone_votes.get(zone, 0.0) + weight
             tile.zone = max(tile.zone_votes.items(), key=lambda kv: kv[1])[0]
 
             if observation is None:
