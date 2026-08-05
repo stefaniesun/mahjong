@@ -1,0 +1,260 @@
+{
+  "params": {
+    "warmup_frames": 90,
+    "iou_site": 0.5,
+    "max_gap": 10,
+    "min_run": 5,
+    "min_gap_s": 0.6,
+    "name_frames": 30
+  },
+  "n_sites": 426,
+  "n_events": 27,
+  "events": [
+    {
+      "ts": 3.08,
+      "kind": "flip:b4->b2",
+      "tile": "b2",
+      "conf": 0.9,
+      "matched": {
+        "raw": 3.0
+      }
+    },
+    {
+      "ts": 3.89,
+      "kind": "appear",
+      "tile": "w7",
+      "conf": 0.965,
+      "matched": {
+        "lag-1.0s": 5.0
+      }
+    },
+    {
+      "ts": 4.63,
+      "kind": "flip:b4->b2",
+      "tile": "b2",
+      "conf": 0.692,
+      "matched": {
+        "raw": 5.0
+      }
+    },
+    {
+      "ts": 5.24,
+      "kind": "appear",
+      "tile": "w4",
+      "conf": 0.935,
+      "matched": {}
+    },
+    {
+      "ts": 8.08,
+      "kind": "appear",
+      "tile": "b3",
+      "conf": 0.952,
+      "matched": {
+        "raw": 8.0,
+        "lag-1.0s": 9.0
+      }
+    },
+    {
+      "ts": 9.47,
+      "kind": "appear",
+      "tile": "t2",
+      "conf": 0.961,
+      "matched": {
+        "raw": 9.0
+      }
+    },
+    {
+      "ts": 10.21,
+      "kind": "appear",
+      "tile": "t3",
+      "conf": 0.966,
+      "matched": {}
+    },
+    {
+      "ts": 12.14,
+      "kind": "appear",
+      "tile": "b3",
+      "conf": 0.952,
+      "matched": {
+        "raw": 12.0
+      }
+    },
+    {
+      "ts": 12.99,
+      "kind": "appear",
+      "tile": "b6",
+      "conf": 0.931,
+      "matched": {
+        "lag-1.0s": 14.0
+      }
+    },
+    {
+      "ts": 14.24,
+      "kind": "appear",
+      "tile": "w8",
+      "conf": 0.949,
+      "matched": {
+        "raw": 14.0
+      }
+    },
+    {
+      "ts": 15.22,
+      "kind": "appear",
+      "tile": "t6",
+      "conf": 0.942,
+      "matched": {}
+    },
+    {
+      "ts": 16.03,
+      "kind": "flip:t8->t1",
+      "tile": "t1",
+      "conf": 0.629,
+      "matched": {}
+    },
+    {
+      "ts": 16.84,
+      "kind": "appear",
+      "tile": "t4",
+      "conf": 0.943,
+      "matched": {
+        "lag-1.0s": 18.0
+      }
+    },
+    {
+      "ts": 17.82,
+      "kind": "appear",
+      "tile": "b3",
+      "conf": 0.954,
+      "matched": {
+        "raw": 18.0
+      }
+    },
+    {
+      "ts": 18.67,
+      "kind": "appear",
+      "tile": "t6",
+      "conf": 0.952,
+      "matched": {
+        "lag-1.0s": 20.0
+      }
+    },
+    {
+      "ts": 19.58,
+      "kind": "appear",
+      "tile": "b5",
+      "conf": 0.936,
+      "matched": {
+        "raw": 20.0
+      }
+    },
+    {
+      "ts": 20.26,
+      "kind": "appear",
+      "tile": "t9",
+      "conf": 0.578,
+      "matched": {}
+    },
+    {
+      "ts": 20.87,
+      "kind": "appear",
+      "tile": "t9",
+      "conf": 0.958,
+      "matched": {
+        "lag-1.0s": 22.0
+      }
+    },
+    {
+      "ts": 21.71,
+      "kind": "appear",
+      "tile": "b2",
+      "conf": 0.826,
+      "matched": {
+        "raw": 22.0
+      }
+    },
+    {
+      "ts": 22.52,
+      "kind": "appear",
+      "tile": "w7",
+      "conf": 0.952,
+      "matched": {
+        "lag-1.0s": 24.0
+      }
+    },
+    {
+      "ts": 23.88,
+      "kind": "appear",
+      "tile": "b3",
+      "conf": 0.953,
+      "matched": {
+        "raw": 24.0
+      }
+    },
+    {
+      "ts": 24.65,
+      "kind": "appear",
+      "tile": "b2",
+      "conf": 0.932,
+      "matched": {}
+    },
+    {
+      "ts": 25.6,
+      "kind": "appear",
+      "tile": "b2",
+      "conf": 0.859,
+      "matched": {
+        "lag-1.0s": 27.0
+      }
+    },
+    {
+      "ts": 26.75,
+      "kind": "appear",
+      "tile": "b2",
+      "conf": 0.758,
+      "matched": {
+        "raw": 27.0
+      }
+    },
+    {
+      "ts": 27.43,
+      "kind": "appear",
+      "tile": "b3",
+      "conf": 0.683,
+      "matched": {}
+    },
+    {
+      "ts": 28.2,
+      "kind": "appear",
+      "tile": "b7",
+      "conf": 0.959,
+      "matched": {
+        "lag-1.0s": 29.0
+      }
+    },
+    {
+      "ts": 29.15,
+      "kind": "appear",
+      "tile": "b3",
+      "conf": 0.956,
+      "matched": {
+        "raw": 29.0
+      }
+    }
+  ],
+  "raw": {
+    "matched": 12,
+    "random_expected": 8.36,
+    "above_random": 3.64,
+    "p_value": 0.021,
+    "tile_ok": 3,
+    "tile_acc": 0.25
+  },
+  "lag-1.0s": {
+    "matched": 9,
+    "random_expected": 8.28,
+    "above_random": 0.72,
+    "p_value": 0.4456,
+    "tile_ok": 1,
+    "tile_acc": 0.111
+  }
+}

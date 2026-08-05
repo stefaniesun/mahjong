@@ -1,0 +1,87 @@
+{
+  "params": {
+    "warmup_frames": 90,
+    "iou_site": 0.5,
+    "max_gap": 10,
+    "min_run": 5,
+    "death_window": 15,
+    "death_iou": 0.15,
+    "min_gap_s": 1.2,
+    "keep": "later",
+    "name_lo": 15,
+    "name_frames": 45,
+    "iou_name": 0.3
+  },
+  "n_sites": 426,
+  "n_births": 158,
+  "n_events": 6,
+  "events": [
+    {
+      "ts": 5.65,
+      "tile": "t4",
+      "conf": 0.938,
+      "votes": 30,
+      "matched": {}
+    },
+    {
+      "ts": 8.18,
+      "tile": "w1",
+      "conf": 0.966,
+      "votes": 30,
+      "matched": {
+        "raw": 8.0,
+        "lag-1.0s": 9.0
+      }
+    },
+    {
+      "ts": 9.47,
+      "tile": "t2",
+      "conf": 0.963,
+      "votes": 30,
+      "matched": {
+        "raw": 9.0
+      }
+    },
+    {
+      "ts": 15.39,
+      "tile": "t6",
+      "conf": 0.952,
+      "votes": 19,
+      "matched": {}
+    },
+    {
+      "ts": 25.6,
+      "tile": "b4",
+      "conf": 0.732,
+      "votes": 47,
+      "matched": {
+        "lag-1.0s": 27.0
+      }
+    },
+    {
+      "ts": 27.43,
+      "tile": "b3",
+      "conf": 0.477,
+      "votes": 64,
+      "matched": {
+        "raw": 27.0
+      }
+    }
+  ],
+  "raw": {
+    "matched": 3,
+    "random_expected": 2.59,
+    "above_random": 0.41,
+    "p_value": 0.5239,
+    "tile_ok": 0,
+    "tile_acc": 0.0
+  },
+  "lag-1.0s": {
+    "matched": 2,
+    "random_expected": 2.57,
+    "above_random": -0.57,
+    "p_value": 0.8433,
+    "tile_ok": 0,
+    "tile_acc": 0.0
+  }
+}

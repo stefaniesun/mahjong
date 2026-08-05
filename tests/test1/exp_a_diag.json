@@ -1,0 +1,170 @@
+[
+  {
+    "t": 1.0,
+    "tile": "w1",
+    "who": "me",
+    "found": {
+      "appear_ts": 0.0,
+      "delay": -1.0,
+      "novelty_max_iou": 0.0,
+      "first_seen_any": null,
+      "hits": 11
+    }
+  },
+  {
+    "t": 2.0,
+    "tile": "b4",
+    "who": "right",
+    "found": {
+      "appear_ts": 1.01,
+      "delay": -0.99,
+      "novelty_max_iou": 0.983,
+      "first_seen_any": 0.0,
+      "hits": 11
+    }
+  },
+  {
+    "t": 3.0,
+    "tile": "b5",
+    "who": "across",
+    "found": {
+      "appear_ts": 2.03,
+      "delay": -0.97,
+      "novelty_max_iou": 0.995,
+      "first_seen_any": 0.0,
+      "hits": 11
+    }
+  },
+  {
+    "t": 5.0,
+    "tile": "w8",
+    "who": "left",
+    "found": {
+      "appear_ts": 4.02,
+      "delay": -0.98,
+      "novelty_max_iou": 0.989,
+      "first_seen_any": 0.0,
+      "hits": 11
+    }
+  },
+  {
+    "t": 8.0,
+    "tile": "b3",
+    "who": "me",
+    "found": {
+      "appear_ts": 8.08,
+      "delay": 0.08,
+      "novelty_max_iou": 0.151,
+      "first_seen_any": null,
+      "hits": 11
+    }
+  },
+  {
+    "t": 9.0,
+    "tile": "b8",
+    "who": "right",
+    "found": {
+      "appear_ts": 9.54,
+      "delay": 0.54,
+      "novelty_max_iou": 0.049,
+      "first_seen_any": 2.1305346488952637,
+      "hits": 11
+    }
+  },
+  {
+    "t": 12.0,
+    "tile": "b3",
+    "who": "across",
+    "found": {
+      "appear_ts": 11.16,
+      "delay": -0.84,
+      "novelty_max_iou": 0.989,
+      "first_seen_any": 10.314493179321289,
+      "hits": 11
+    }
+  },
+  {
+    "t": 14.0,
+    "tile": "w9",
+    "who": "left",
+    "found": {
+      "appear_ts": 13.26,
+      "delay": -0.74,
+      "novelty_max_iou": 0.978,
+      "first_seen_any": 0.6425421833992004,
+      "hits": 11
+    }
+  },
+  {
+    "t": 18.0,
+    "tile": "b7",
+    "who": "me",
+    "found": {
+      "appear_ts": 17.01,
+      "delay": -0.99,
+      "novelty_max_iou": 0.991,
+      "first_seen_any": 0.0,
+      "hits": 11
+    }
+  },
+  {
+    "t": 20.0,
+    "tile": "b5",
+    "who": "right",
+    "found": {
+      "appear_ts": 19.01,
+      "delay": -0.99,
+      "novelty_max_iou": 0.997,
+      "first_seen_any": 3.381800889968872,
+      "hits": 8
+    }
+  },
+  {
+    "t": 22.0,
+    "tile": "b7",
+    "who": "across",
+    "found": {
+      "appear_ts": 21.0,
+      "delay": -1.0,
+      "novelty_max_iou": 0.993,
+      "first_seen_any": 2.1305346488952637,
+      "hits": 11
+    }
+  },
+  {
+    "t": 24.0,
+    "tile": "b2",
+    "who": "left",
+    "found": {
+      "appear_ts": 23.94,
+      "delay": -0.06,
+      "novelty_max_iou": 0.331,
+      "first_seen_any": 21.778799057006836,
+      "hits": 11
+    }
+  },
+  {
+    "t": 27.0,
+    "tile": "t2",
+    "who": "me",
+    "found": {
+      "appear_ts": 26.01,
+      "delay": -0.99,
+      "novelty_max_iou": 0.977,
+      "first_seen_any": 20.324623107910156,
+      "hits": 11
+    }
+  },
+  {
+    "t": 29.0,
+    "tile": "b7",
+    "who": "right",
+    "found": {
+      "appear_ts": 28.0,
+      "delay": -1.0,
+      "novelty_max_iou": 0.992,
+      "first_seen_any": 19.546810150146484,
+      "hits": 11
+    }
+  }
+]

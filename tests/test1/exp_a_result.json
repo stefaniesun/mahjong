@@ -1,0 +1,83 @@
+{
+  "params": {
+    "warmup_frames": 90,
+    "lookback_frames": 15,
+    "iou_novel": 0.1,
+    "iou_same": 0.3,
+    "persist_frames": 10,
+    "persist_min": 5,
+    "min_gap_s": 0.6,
+    "name_frames": 45,
+    "iou_name": 0.3
+  },
+  "n_events": 6,
+  "n_truth": 14,
+  "matched": 3,
+  "missed": 11,
+  "spurious": 3,
+  "random_expected": 2.59,
+  "above_random": 0.41,
+  "p_value": 0.5239,
+  "tile_ok": 2,
+  "tile_acc_on_matched": 0.667,
+  "events": [
+    {
+      "ts": 4.36,
+      "tile": "t4",
+      "conf": 0.925,
+      "votes": 34,
+      "matched_truth": null
+    },
+    {
+      "ts": 5.41,
+      "tile": "w8",
+      "conf": 0.954,
+      "votes": 45,
+      "matched_truth": 5.0
+    },
+    {
+      "ts": 13.32,
+      "tile": "b5",
+      "conf": 0.945,
+      "votes": 45,
+      "matched_truth": null
+    },
+    {
+      "ts": 17.99,
+      "tile": "b7",
+      "conf": 0.95,
+      "votes": 5,
+      "matched_truth": 18.0
+    },
+    {
+      "ts": 19.72,
+      "tile": "b9",
+      "conf": 0.476,
+      "votes": 36,
+      "matched_truth": 20.0
+    },
+    {
+      "ts": 22.96,
+      "tile": "t4",
+      "conf": 0.937,
+      "votes": 42,
+      "matched_truth": null
+    }
+  ],
+  "truth_times": [
+    1.0,
+    2.0,
+    3.0,
+    5.0,
+    8.0,
+    9.0,
+    12.0,
+    14.0,
+    18.0,
+    20.0,
+    22.0,
+    24.0,
+    27.0,
+    29.0
+  ]
+}
