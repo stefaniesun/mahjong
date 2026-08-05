@@ -28,6 +28,7 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from mahjong_rt.game_events import GameEventConfig, GameEventExtractor
+from mahjong_rt.offline_game_events import OfflineEventConfig, reconstruct_events
 from mahjong_rt.recording import Recording
 from mahjong_rt.replay import replay
 
@@ -125,6 +126,8 @@ def main(argv=None) -> int:
     ap.add_argument("--testset", type=Path, default=TESTSET)
     ap.add_argument("--config", type=Path, default=Path(__file__).resolve().parents[1] / "configs" / "pipeline.yaml")
     ap.add_argument("--recordings", type=str, default="recordings2", help="Recording folder under the testset.")
+    ap.add_argument("--method", choices=("stable", "online"), default="stable",
+                    help="Event reconstruction method (default: stable).")
     ap.add_argument("--clip", type=str, default=None, help="Only this clip.")
     ap.add_argument("--verbose", action="store_true", help="Print the alignment.")
     args = ap.parse_args(argv)
@@ -135,7 +138,7 @@ def main(argv=None) -> int:
     grand = {"matched": 0, "tile_ok": 0, "player_ok": 0, "missed": 0, "spurious": 0, "truth": 0}
     for name, clip in truth_all.get("clips", {}).items():
         truths = clip.get("events", [])
-        if not truths or (args.clip and args.clip not in name):
+        if args.clip and args.clip not in name:
             continue
         path = args.testset / args.recordings / f"{name}.npz"
         if not path.exists():
@@ -147,14 +150,23 @@ def main(argv=None) -> int:
                         state_cfg=cfg.get("state"), zones_cfg=cfg.get("zones"), checkpoints={})
         summaries = [e for e in result["events"] if e.get("type") == "frame_summary"]
 
-        # The turn pointer has no anchor in a clip with no pong, so it is started from
-        # the truth's first player and the tile sequence is scored independently. A live
-        # system would anchor on the first claim instead; see the note printed below.
-        extractor = GameEventExtractor(GameEventConfig(start_player=truths[0].get("who")))
-        for summary, frame in zip(summaries, recording.frames):
-            extractor.add_frame(summary, frame.homography, detections=frame.boxes)
-        extractor.flush()
-        preds = [e.to_dict() for e in extractor.events]
+        # The turn pointer has no anchor in a clip with no pong, so a labelled clip is
+        # started from the truth's first player and tile sequence is scored independently.
+        # Empty-truth clips use no anchor; every prediction there is a false positive.
+        start_player = truths[0].get("who") if truths else None
+        if args.method == "stable":
+            events = reconstruct_events(
+                summaries,
+                [frame.homography for frame in recording.frames],
+                OfflineEventConfig(start_player=start_player),
+            )
+        else:
+            extractor = GameEventExtractor(GameEventConfig(start_player=start_player))
+            for summary, frame in zip(summaries, recording.frames):
+                extractor.add_frame(summary, frame.homography, detections=frame.boxes)
+            extractor.flush()
+            events = extractor.events
+        preds = [event.to_dict() for event in events]
 
         pairs = align(preds, truths)
         matched = tile_ok = player_ok = missed = spurious = 0
