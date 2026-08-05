@@ -47,3 +47,6 @@ mahjong-prelabeler/
 
 
 
+
+# 第三方模型权重，不入库（7.8MB，官方地址见 mahjong-rt/docs/EVENT_LAYER_STATUS.md）
+models/*.task
