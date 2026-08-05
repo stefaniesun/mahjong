@@ -1,0 +1,32 @@
+{
+ "format": "mahjong_draw_gt/1",
+ "_note": "clip01 摸牌时刻,2026-08-05 按 tests/test1/frames/draw/ 全帧条带目视锚定(精度±0.3s)。who = 摸牌的人 = 下一条 discard 的玩家。me 的摸牌大多在近端牌墙,画面外,无法锚定。",
+ "clip": "clip01_7507945925261200",
+ "draws": [
+  {"t": 0.45, "who": "right",  "conf": "high", "note": "手持牌离开右侧牌墙端"},
+  {"t": 1.75, "who": "across", "conf": "high", "note": "手臂伸向顶墙左端抓取"},
+  {"t": 3.3,  "who": "left",   "conf": "mid",  "note": "左手在左上墙头活动"},
+  {"t": 6.6,  "who": "me",     "conf": "low",  "note": "近端牌墙画面外,仅凭手持牌出现推断"},
+  {"t": 7.3,  "who": "right",  "conf": "mid",  "note": "7.30 帧手已持牌,实际抓取稍早"},
+  {"t": 10.1, "who": "across", "conf": "mid",  "note": "顶墙取牌后收向手牌区"},
+  {"t": 12.9, "who": "left",   "conf": "mid",  "note": "左手在左墙头,窗口末端"},
+  {"t": 16.1, "who": "me",     "conf": "low",  "note": "画面外,推断"},
+  {"t": 18.3, "who": "right",  "conf": "high", "note": "从右下墙端取牌收回"},
+  {"t": 19.8, "who": "across", "conf": "mid",  "note": "条纹臂探向左墙头(对家的右手)"},
+  {"t": 22.0, "who": "left",   "conf": "mid",  "note": "左墙头取牌"},
+  {"t": null, "who": "me",     "conf": "none", "note": "完全画面外,不可见"},
+  {"t": 27.0, "who": "right",  "conf": "high", "note": "右侧墙端取牌"}
+ ],
+ "detector_score": {
+  "signature": "手进入牌墙区驻留>=3帧后离开(MediaPipe 手心轨迹)",
+  "candidates": 11,
+  "hits_pm0.5s": "0/13",
+  "hits_pm1.0s": "4/13 (随机期望约6.7)",
+  "verdict": "不优于随机",
+  "fatal_issues": [
+   "me 的摸牌在近端牌墙,画面外(2/13 连人眼都无法锚定)",
+   "对家的手常驻顶部'牌墙区',区域定义混淆了本垒和牌墙",
+   "抓取驻留只有2-3帧,而手部轨迹平均9帧就断一次(887帧102条轨迹),轨迹形状分析无从谈起"
+  ]
+ }
+}

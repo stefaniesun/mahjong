@@ -1,0 +1,68 @@
+[
+ {
+  "ts": 1.184,
+  "frame": 35,
+  "side": "across",
+  "dwell": 5
+ },
+ {
+  "ts": 3.923,
+  "frame": 116,
+  "side": "across",
+  "dwell": 21
+ },
+ {
+  "ts": 7.88,
+  "frame": 233,
+  "side": "right",
+  "dwell": 8
+ },
+ {
+  "ts": 9.131,
+  "frame": 270,
+  "side": "right",
+  "dwell": 10
+ },
+ {
+  "ts": 11.295,
+  "frame": 334,
+  "side": "right",
+  "dwell": 4
+ },
+ {
+  "ts": 12.31,
+  "frame": 364,
+  "side": "right",
+  "dwell": 35
+ },
+ {
+  "ts": 17.585,
+  "frame": 520,
+  "side": "right",
+  "dwell": 37
+ },
+ {
+  "ts": 18.701,
+  "frame": 553,
+  "side": "across",
+  "dwell": 3
+ },
+ {
+  "ts": 20.494,
+  "frame": 606,
+  "side": "across",
+  "dwell": 244
+ },
+ {
+  "ts": 24.89,
+  "frame": 736,
+  "side": "right",
+  "dwell": 3
+ },
+ {
+  "ts": 29.658,
+  "frame": 877,
+  "side": "across",
+  "dwell": 45
+ }
+]
