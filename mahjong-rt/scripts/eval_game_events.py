@@ -34,16 +34,30 @@ from mahjong_rt.replay import replay
 ROOT = Path(__file__).resolve().parents[2]
 TESTSET = ROOT / "output" / "video_testset_pilot"
 
-GAP = -0.6      # cost of leaving an event unmatched; below the 0 a bad pair would score
+GAP = -0.6       # cost of leaving an event unmatched; below the 0 a bad pair would score
+TIME_TOL = 2.5   # seconds of slack before a timed truth event starts rejecting a pair
 
 
 def similarity(pred: dict, truth: dict) -> float:
-    """How much of one event agrees with another. 1.0 is identical."""
+    """How much of one event agrees with another. 1.0 is identical.
+
+    Where the truth carries a timestamp — even a rough one on a few events — it acts as
+    an anchor rather than as another scored field. Without any, alignment is pure
+    sequence matching, and that has a trap: the turn pointer advances once per detected
+    event and the truth advances once per truth event, so equal counts *force* perfect
+    attribution regardless of whether the k-th detection is really the k-th discard.
+    A handful of anchors is enough to break that.
+    """
     if pred["event_type"] != truth.get("type"):
         # Never pair different kinds of event. It has to be worse than two gaps, or the
         # aligner will happily marry a spurious pong to a missed discard and report both
         # as "matched but different".
         return -99.0
+    truth_ts = truth.get("t")
+    if isinstance(truth_ts, (int, float)):
+        drift = abs(float(pred["ts"]) - float(truth_ts))
+        if drift > TIME_TOL:
+            return -99.0                              # anchored elsewhere: cannot be this one
     score = 0.0
     if truth.get("tile") is None:
         score += 0.6                                  # unreadable in the video: no evidence either way
