@@ -66,7 +66,7 @@ class GameEventConfig:
     # Frames to ignore at the start. The pool already on the table has to be confirmed
     # before anything can be called new, and the voter needs several observations per
     # tile — so every pre-existing tile would otherwise read as a fresh discard.
-    warmup_frames: int = 30
+    warmup_frames: int = 90
     # A cell must hold a tile for this many frames before it counts. One frame of a
     # hand passing through, or one flickering detection, is not a discard.
     settle_frames: int = 3
@@ -74,7 +74,10 @@ class GameEventConfig:
     # twice, usually a tile straddling a cell boundary.
     min_gap_s: float = 0.6
     # Melds are read straight from the zone stage, which already groups them.
-    detect_melds: bool = True
+    # Off by default. On clip01 — which contains no pong at all — it produced six, every
+    # one of them a single-frame zone error promoted to an event. It needs cross-frame
+    # confirmation before it can be trusted; until then it is a pure false-positive source.
+    detect_melds: bool = False
     # Occupancy from raw detections. Correct in principle — a tile the detector saw all
     # along is not new — but a discard lands *on* the pile, so its cell has usually been
     # seen already. Measured on clip01 this removes every discard, true ones included.

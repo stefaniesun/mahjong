@@ -35,7 +35,11 @@ ROOT = Path(__file__).resolve().parents[2]
 TESTSET = ROOT / "output" / "video_testset_pilot"
 
 GAP = -0.6       # cost of leaving an event unmatched; below the 0 a bad pair would score
-TIME_TOL = 2.5   # seconds of slack before a timed truth event starts rejecting a pair
+# Seconds of slack before a timed truth event rejects a pair. It has to be well under
+# the gap between events or the metric stops meaning anything: clip01's discards are
+# 1-4s apart, and at 2.5s a random scatter of the same number of points scores 9 of 14.
+# At 0.5s random scores 5.0, so there is room for a result to be above chance.
+TIME_TOL = 0.5
 
 
 def similarity(pred: dict, truth: dict) -> float:
@@ -66,6 +70,29 @@ def similarity(pred: dict, truth: dict) -> float:
     if pred["player"] == truth.get("who"):
         score += 0.4
     return score
+
+
+def random_baseline(n_preds: int, truths: list[dict], trials: int = 4000, seed: int = 0) -> float:
+    """How many hits the same number of randomly scattered events would score.
+
+    Without this the timing numbers flatter themselves: a handful of points thrown at a
+    30-second clip lands near *something* most of the time. A detector has to beat this
+    to have shown anything at all.
+    """
+    times = [float(t["t"]) for t in truths if isinstance(t.get("t"), (int, float))]
+    if not times or not n_preds:
+        return 0.0
+    span = max(max(times), 1.0)
+    rng = np.random.RandomState(seed)
+    total = 0
+    for _ in range(trials):
+        used: set[int] = set()
+        for p in sorted(rng.uniform(0, span, n_preds)):
+            near = [(abs(p - t), i) for i, t in enumerate(times) if i not in used and abs(p - t) <= TIME_TOL]
+            if near:
+                used.add(min(near)[1])
+        total += len(used)
+    return total / trials
 
 
 def align(preds: list[dict], truths: list[dict]) -> list[tuple[int | None, int | None]]:
@@ -152,6 +179,10 @@ def main(argv=None) -> int:
         print(f"\n=== {name} ===")
         print(f"真值 {len(truths)} 条,识别 {len(preds)} 条")
         print(f"  匹配上 {matched}   漏检 {missed}   误报 {spurious}")
+        if any(isinstance(t.get("t"), (int, float)) for t in truths):
+            chance = random_baseline(len(preds), truths)
+            print(f"  时间对齐容差 ±{TIME_TOL}s;同样数量的随机事件平均能命中 {chance:.1f}"
+                  f"  ->  超出随机 {matched - chance:+.1f}")
         if matched:
             print(f"  匹配事件里牌认对 {tile_ok}/{matched} = {tile_ok / matched:.1%}")
             print(f"  匹配事件里归属对 {player_ok}/{matched} = {player_ok / matched:.1%}")

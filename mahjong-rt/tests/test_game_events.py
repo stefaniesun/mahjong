@@ -66,7 +66,8 @@ def test_turn_advances_counter_clockwise():
 
 def test_a_pong_reanchors_the_turn():
     """The claimer discards next, so a pong pulls a drifting pointer back into line."""
-    ex = GameEventExtractor(GameEventConfig(warmup_frames=1, settle_frames=1, min_gap_s=0.0, start_player="me"))
+    ex = GameEventExtractor(GameEventConfig(warmup_frames=1, settle_frames=1, min_gap_s=0.0,
+                                            start_player="me", detect_melds=True))
     ex.add_frame(summary([], ts=0.0, frame=0))
     ex.add_frame(summary(meld("t3", "seat_across", 400), ts=1.0, frame=1))
     ex.flush()

@@ -12,98 +12,112 @@
      "type": "discard",
      "tile": "w1",
      "from": null,
-     "note": ""
+     "note": "",
+     "t": 1.0
     },
     {
      "who": "right",
      "type": "discard",
      "tile": "b4",
      "from": null,
-     "note": ""
+     "note": "",
+     "t": 2.0
     },
     {
      "who": "across",
      "type": "discard",
      "tile": "b5",
      "from": null,
-     "note": ""
+     "note": "",
+     "t": 3.0
     },
     {
      "who": "left",
      "type": "discard",
      "tile": "w8",
      "from": null,
-     "note": ""
+     "note": "",
+     "t": 5.0
     },
     {
      "who": "me",
      "type": "discard",
      "tile": "b3",
      "from": null,
-     "note": ""
+     "note": "",
+     "t": 8.0
     },
     {
      "who": "right",
      "type": "discard",
      "tile": "b8",
      "from": null,
-     "note": ""
+     "note": "",
+     "t": 9.0
     },
     {
      "who": "across",
      "type": "discard",
      "tile": "b3",
      "from": null,
-     "note": ""
+     "note": "",
+     "t": 12.0
     },
     {
      "who": "left",
      "type": "discard",
      "tile": "w9",
      "from": null,
-     "note": ""
+     "note": "",
+     "t": 14.0
     },
     {
      "who": "me",
      "type": "discard",
      "tile": "b7",
      "from": null,
-     "note": ""
+     "note": "",
+     "t": 18.0
     },
     {
      "who": "right",
      "type": "discard",
      "tile": "b5",
      "from": null,
-     "note": ""
+     "note": "",
+     "t": 20.0
     },
     {
      "who": "across",
      "type": "discard",
      "tile": "b7",
      "from": null,
-     "note": ""
+     "note": "",
+     "t": 22.0
     },
     {
      "who": "left",
      "type": "discard",
      "tile": "b2",
      "from": null,
-     "note": ""
+     "note": "",
+     "t": 24.0
     },
     {
      "who": "me",
      "type": "discard",
      "tile": "t2",
      "from": null,
-     "note": ""
+     "note": "",
+     "t": 27.0
     },
     {
      "who": "right",
      "type": "discard",
      "tile": "b7",
      "from": null,
-     "note": ""
+     "note": "",
+     "t": 29.0
     }
    ]
   },
