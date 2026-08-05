@@ -21,7 +21,9 @@
       "tile": "t4",
       "conf": 0.938,
       "votes": 30,
-      "matched": {}
+      "matched": {
+        "lag-1.0s": 7.1
+      }
     },
     {
       "ts": 8.18,
@@ -29,8 +31,7 @@
       "conf": 0.966,
       "votes": 30,
       "matched": {
-        "raw": 8.0,
-        "lag-1.0s": 9.0
+        "raw": 8.1
       }
     },
     {
@@ -39,7 +40,7 @@
       "conf": 0.963,
       "votes": 30,
       "matched": {
-        "raw": 9.0
+        "lag-1.0s": 10.5
       }
     },
     {
@@ -55,7 +56,7 @@
       "conf": 0.732,
       "votes": 47,
       "matched": {
-        "lag-1.0s": 27.0
+        "lag-1.0s": 26.2
       }
     },
     {
@@ -64,23 +65,23 @@
       "conf": 0.477,
       "votes": 64,
       "matched": {
-        "raw": 27.0
+        "lag-1.0s": 28.1
       }
     }
   ],
   "raw": {
-    "matched": 3,
-    "random_expected": 2.59,
-    "above_random": 0.41,
-    "p_value": 0.5239,
+    "matched": 1,
+    "random_expected": 2.6,
+    "above_random": -1.6,
+    "p_value": 0.9815,
     "tile_ok": 0,
     "tile_acc": 0.0
   },
   "lag-1.0s": {
-    "matched": 2,
-    "random_expected": 2.57,
-    "above_random": -0.57,
-    "p_value": 0.8433,
+    "matched": 4,
+    "random_expected": 2.49,
+    "above_random": 1.51,
+    "p_value": 0.1867,
     "tile_ok": 0,
     "tile_acc": 0.0
   }

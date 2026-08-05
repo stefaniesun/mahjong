@@ -12,112 +12,112 @@
      "type": "discard",
      "tile": "w1",
      "from": null,
-     "note": "",
-     "t": 1.0
+     "note": "t原1.0s(口述);2026-08-05按落桌帧修正;低置信:落桌发生在片段起点附近,条带只覆盖到 t=0.1 起",
+     "t": 0.2
     },
     {
      "who": "right",
      "type": "discard",
      "tile": "b4",
      "from": null,
-     "note": "",
-     "t": 2.0
+     "note": "t原2.0s(口述);2026-08-05按落桌帧修正",
+     "t": 1.2
     },
     {
      "who": "across",
      "type": "discard",
      "tile": "b5",
      "from": null,
-     "note": "",
-     "t": 3.0
+     "note": "t原3.0s(口述);2026-08-05按落桌帧修正",
+     "t": 2.4
     },
     {
      "who": "left",
      "type": "discard",
      "tile": "w8",
      "from": null,
-     "note": "",
-     "t": 5.0
+     "note": "t原5.0s(口述);2026-08-05按落桌帧修正;中置信:3.1-3.3s 上家曾在牌堆上方持牌,4.0-4.3s 是清晰的放置动作",
+     "t": 4.2
     },
     {
      "who": "me",
      "type": "discard",
      "tile": "b3",
      "from": null,
-     "note": "",
-     "t": 8.0
+     "note": "t原8.0s(口述);2026-08-05按落桌帧修正",
+     "t": 7.1
     },
     {
      "who": "right",
      "type": "discard",
      "tile": "b8",
      "from": null,
-     "note": "",
-     "t": 9.0
+     "note": "t原9.0s(口述);2026-08-05按落桌帧修正",
+     "t": 8.1
     },
     {
      "who": "across",
      "type": "discard",
      "tile": "b3",
      "from": null,
-     "note": "",
-     "t": 12.0
+     "note": "t原12.0s(口述);2026-08-05按落桌帧修正",
+     "t": 10.5
     },
     {
      "who": "left",
      "type": "discard",
      "tile": "w9",
      "from": null,
-     "note": "",
-     "t": 14.0
+     "note": "t原14.0s(口述);2026-08-05按落桌帧修正",
+     "t": 13.2
     },
     {
      "who": "me",
      "type": "discard",
      "tile": "b7",
      "from": null,
-     "note": "",
-     "t": 18.0
+     "note": "t原18.0s(口述);2026-08-05按落桌帧修正",
+     "t": 17.1
     },
     {
      "who": "right",
      "type": "discard",
      "tile": "b5",
      "from": null,
-     "note": "",
-     "t": 20.0
+     "note": "t原20.0s(口述);2026-08-05按落桌帧修正",
+     "t": 18.6
     },
     {
      "who": "across",
      "type": "discard",
      "tile": "b7",
      "from": null,
-     "note": "",
-     "t": 22.0
+     "note": "t原22.0s(口述);2026-08-05按落桌帧修正",
+     "t": 21.1
     },
     {
      "who": "left",
      "type": "discard",
      "tile": "b2",
      "from": null,
-     "note": "",
-     "t": 24.0
+     "note": "t原24.0s(口述);2026-08-05按落桌帧修正",
+     "t": 22.7
     },
     {
      "who": "me",
      "type": "discard",
      "tile": "t2",
      "from": null,
-     "note": "",
-     "t": 27.0
+     "note": "t原27.0s(口述);2026-08-05按落桌帧修正",
+     "t": 26.2
     },
     {
      "who": "right",
      "type": "discard",
      "tile": "b7",
      "from": null,
-     "note": "",
-     "t": 29.0
+     "note": "t原29.0s(口述);2026-08-05按落桌帧修正",
+     "t": 28.1
     }
    ]
   },
@@ -133,5 +133,6 @@
    "duration": 30.0,
    "events": []
   }
- }
+ },
+ "_time_semantics": "t = 牌离手落桌时刻(帧级复核,精度±0.2s,见 tests/test1/frames/fix/)。2026-08-05 前的版本是口述标注时刻,系统性滞后约1s,备份于 events_gt.oral_t.json"
 }
