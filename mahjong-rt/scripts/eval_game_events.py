@@ -28,7 +28,12 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from mahjong_rt.game_events import GameEventConfig, GameEventExtractor
-from mahjong_rt.offline_game_events import OfflineEventConfig, reconstruct_events
+from mahjong_rt.offline_game_events import (
+    OfflineEventConfig,
+    reconstruct_events,
+    reconstruct_events_with_landings,
+)
+from mahjong_rt.raw_event_backtrack import BacktrackConfig, refine_events_with_raw_tracks
 from mahjong_rt.recording import Recording
 from mahjong_rt.replay import replay
 
@@ -44,36 +49,22 @@ TIME_TOL = 0.5
 
 
 def similarity(pred: dict, truth: dict) -> float:
-    """How much of one event agrees with another. 1.0 is identical.
-
-    Where the truth carries a timestamp — even a rough one on a few events — it acts as
-    an anchor rather than as another scored field. Without any, alignment is pure
-    sequence matching, and that has a trap: the turn pointer advances once per detected
-    event and the truth advances once per truth event, so equal counts *force* perfect
-    attribution regardless of whether the k-th detection is really the k-th discard.
-    A handful of anchors is enough to break that.
-    """
+    """Alignment score that never reads the tile or player being evaluated."""
     if pred["event_type"] != truth.get("type"):
-        # Never pair different kinds of event. It has to be worse than two gaps, or the
-        # aligner will happily marry a spurious pong to a missed discard and report both
-        # as "matched but different".
         return -99.0
     truth_ts = truth.get("t")
-    if isinstance(truth_ts, (int, float)):
-        drift = abs(float(pred["ts"]) - float(truth_ts))
-        if drift > TIME_TOL:
-            return -99.0                              # anchored elsewhere: cannot be this one
-    score = 0.0
-    if truth.get("tile") is None:
-        score += 0.6                                  # unreadable in the video: no evidence either way
-    elif pred["tile"] == truth["tile"]:
-        score += 0.6
-    if pred["player"] == truth.get("who"):
-        score += 0.4
-    return score
+    if not isinstance(truth_ts, (int, float)):
+        return 1.0
+    return 1.0 if abs(float(pred["ts"]) - float(truth_ts)) <= TIME_TOL else -99.0
 
 
-def random_baseline(n_preds: int, truths: list[dict], trials: int = 4000, seed: int = 0) -> float:
+def random_baseline(
+    n_preds: int,
+    truths: list[dict],
+    duration_s: float,
+    trials: int = 4000,
+    seed: int = 0,
+) -> float:
     """How many hits the same number of randomly scattered events would score.
 
     Without this the timing numbers flatter themselves: a handful of points thrown at a
@@ -83,16 +74,16 @@ def random_baseline(n_preds: int, truths: list[dict], trials: int = 4000, seed: 
     times = [float(t["t"]) for t in truths if isinstance(t.get("t"), (int, float))]
     if not times or not n_preds:
         return 0.0
-    span = max(max(times), 1.0)
+    span = max(duration_s, 1.0)
+    event_type = truths[0].get("type", "discard")
     rng = np.random.RandomState(seed)
     total = 0
     for _ in range(trials):
-        used: set[int] = set()
-        for p in sorted(rng.uniform(0, span, n_preds)):
-            near = [(abs(p - t), i) for i, t in enumerate(times) if i not in used and abs(p - t) <= TIME_TOL]
-            if near:
-                used.add(min(near)[1])
-        total += len(used)
+        random_preds = [
+            {"event_type": event_type, "ts": float(ts), "tile": None, "player": "unknown"}
+            for ts in sorted(rng.uniform(0, span, n_preds))
+        ]
+        total += sum(pi is not None and ti is not None for pi, ti in align(random_preds, truths))
     return total / trials
 
 
@@ -126,7 +117,7 @@ def main(argv=None) -> int:
     ap.add_argument("--testset", type=Path, default=TESTSET)
     ap.add_argument("--config", type=Path, default=Path(__file__).resolve().parents[1] / "configs" / "pipeline.yaml")
     ap.add_argument("--recordings", type=str, default="recordings2", help="Recording folder under the testset.")
-    ap.add_argument("--method", choices=("stable", "online"), default="stable",
+    ap.add_argument("--method", choices=("backtrack", "stable", "online"), default="stable",
                     help="Event reconstruction method (default: stable).")
     ap.add_argument("--clip", type=str, default=None, help="Only this clip.")
     ap.add_argument("--verbose", action="store_true", help="Print the alignment.")
@@ -150,11 +141,22 @@ def main(argv=None) -> int:
                         state_cfg=cfg.get("state"), zones_cfg=cfg.get("zones"), checkpoints={})
         summaries = [e for e in result["events"] if e.get("type") == "frame_summary"]
 
-        # The turn pointer has no anchor in a clip with no pong, so a labelled clip is
-        # started from the truth's first player and tile sequence is scored independently.
-        # Empty-truth clips use no anchor; every prediction there is a false positive.
-        start_player = truths[0].get("who") if truths else None
-        if args.method == "stable":
+        # Do not inject the truth's first player. Attribution remains unknown until an
+        # observed claim or another non-oracle anchor is available.
+        start_player = None
+        if args.method == "backtrack":
+            events, landings = reconstruct_events_with_landings(
+                summaries,
+                [frame.homography for frame in recording.frames],
+                OfflineEventConfig(start_player=start_player),
+            )
+            events = refine_events_with_raw_tracks(
+                recording,
+                events,
+                landings,
+                BacktrackConfig(require_motion=False),
+            )
+        elif args.method == "stable":
             events = reconstruct_events(
                 summaries,
                 [frame.homography for frame in recording.frames],
@@ -192,7 +194,8 @@ def main(argv=None) -> int:
         print(f"真值 {len(truths)} 条,识别 {len(preds)} 条")
         print(f"  匹配上 {matched}   漏检 {missed}   误报 {spurious}")
         if any(isinstance(t.get("t"), (int, float)) for t in truths):
-            chance = random_baseline(len(preds), truths)
+            duration_s = recording.frames[-1].timestamp if recording.frames else 0.0
+            chance = random_baseline(len(preds), truths, duration_s)
             print(f"  时间对齐容差 ±{TIME_TOL}s;同样数量的随机事件平均能命中 {chance:.1f}"
                   f"  ->  超出随机 {matched - chance:+.1f}")
         if matched:
@@ -211,8 +214,7 @@ def main(argv=None) -> int:
         print(f"真值 {grand['truth']} 条  匹配 {grand['matched']}  漏检 {grand['missed']}  误报 {grand['spurious']}")
         if grand["matched"]:
             print(f"牌认对 {grand['tile_ok'] / grand['matched']:.1%}   归属对 {grand['player_ok'] / grand['matched']:.1%}")
-        print("\n注:归属是靠轮次推的,起点取自真值第一条。真实系统要靠第一次碰牌来定锚点——"
-              "clip01 没有碰,所以它的归属分数偏乐观。")
+        print("\n注:评测不注入真值起始玩家；没有碰牌等视觉锚点时，归属输出为 unknown。")
     return 0
 
 

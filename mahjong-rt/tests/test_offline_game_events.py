@@ -142,7 +142,12 @@ def test_eval_cli_accepts_stable_and_online_methods(tmp_path: Path, monkeypatch:
     scripts = Path(__file__).resolve().parents[1] / "scripts"
     monkeypatch.syspath_prepend(str(scripts))
     sys.modules.pop("eval_game_events", None)
-    from eval_game_events import main
+    from eval_game_events import align, main, similarity
+
+    pred = {"event_type": "discard", "ts": 1.0, "tile": "wrong", "player": "wrong"}
+    truth = {"type": "discard", "t": 1.0, "tile": "b1", "who": "me"}
+    assert similarity(pred, truth) == 1.0
+    assert align([pred], [truth]) == [(0, 0)]
 
     testset = tmp_path / "testset"
     testset.mkdir()
@@ -150,5 +155,6 @@ def test_eval_cli_accepts_stable_and_online_methods(tmp_path: Path, monkeypatch:
     config = tmp_path / "pipeline.yaml"
     config.write_text("{}", encoding="utf-8")
 
+    assert main(["--testset", str(testset), "--config", str(config), "--method", "backtrack"]) == 0
     assert main(["--testset", str(testset), "--config", str(config), "--method", "stable"]) == 0
     assert main(["--testset", str(testset), "--config", str(config), "--method", "online"]) == 0

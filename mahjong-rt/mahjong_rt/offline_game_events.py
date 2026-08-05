@@ -9,6 +9,7 @@ from typing import Any, Sequence
 import numpy as np
 
 from .game_events import GameEvent, SEATS
+from .raw_event_backtrack import LandingPoint
 
 
 @dataclass
@@ -173,11 +174,11 @@ def _match(previous: Sequence[_StableTile], current: Sequence[_StableTile], rati
     return matched_current
 
 
-def reconstruct_events(
+def reconstruct_events_with_landings(
     summaries: Sequence[dict[str, Any]],
     homographies: Sequence[Any] | None = None,
     config: OfflineEventConfig | None = None,
-) -> list[GameEvent]:
+) -> tuple[list[GameEvent], list[LandingPoint]]:
     config = config or OfflineEventConfig()
     indexed_frames = [
         (index, summary)
@@ -190,7 +191,7 @@ def reconstruct_events(
     indexed_frames.sort(key=lambda item: float(item[1].get("ts", 0.0)))
     frames = [summary for _, summary in indexed_frames]
     if not frames:
-        return []
+        return [], []
     if config.start_player is not None and config.start_player not in SEATS:
         raise ValueError(f"start_player must be one of {SEATS}")
 
@@ -232,6 +233,7 @@ def reconstruct_events(
 
     candidates.sort(key=lambda tile: tile.ts)
     events: list[GameEvent] = []
+    landings: list[LandingPoint] = []
     counts = initial_counts.copy()
     last_event_ts = -float("inf")
     turn_index = SEATS.index(config.start_player) if config.start_player is not None else 0
@@ -250,8 +252,18 @@ def reconstruct_events(
                 confidence=min(candidate.confidence, candidate.support),
             )
         )
+        landings.append(LandingPoint(candidate.x, candidate.y, candidate.size))
         counts[candidate.label] += 1
         last_event_ts = candidate.ts
         if config.start_player is not None:
             turn_index = (turn_index + 1) % len(SEATS)
+    return events, landings
+
+
+def reconstruct_events(
+    summaries: Sequence[dict[str, Any]],
+    homographies: Sequence[Any] | None = None,
+    config: OfflineEventConfig | None = None,
+) -> list[GameEvent]:
+    events, _ = reconstruct_events_with_landings(summaries, homographies, config)
     return events
