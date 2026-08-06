@@ -125,7 +125,80 @@
    "video": "clips_full/clip02_7499348207492304.mp4",
    "source_start": 165.0,
    "duration": 30.0,
-   "events": []
+   "events": [
+    {
+     "t": 4.0,
+     "who": "me",
+     "type": "discard",
+     "tile": "w9",
+     "from": null,
+     "note": "口述真值。17s 对家自摸=牌局边界，其后为新一局；上家在本段未出现过打牌"
+    },
+    {
+     "t": 8.0,
+     "who": "right",
+     "type": "discard",
+     "tile": "t4",
+     "from": null,
+     "note": "口述真值。17s 对家自摸=牌局边界，其后为新一局；上家在本段未出现过打牌"
+    },
+    {
+     "t": 9.0,
+     "who": "across",
+     "type": "discard",
+     "tile": "w5",
+     "from": null,
+     "note": "口述真值。17s 对家自摸=牌局边界，其后为新一局；上家在本段未出现过打牌"
+    },
+    {
+     "t": 13.0,
+     "who": "me",
+     "type": "discard",
+     "tile": "t7",
+     "from": null,
+     "note": "口述真值。17s 对家自摸=牌局边界，其后为新一局；上家在本段未出现过打牌"
+    },
+    {
+     "t": 16.0,
+     "who": "right",
+     "type": "discard",
+     "tile": "b3",
+     "from": null,
+     "note": "口述真值。17s 对家自摸=牌局边界，其后为新一局；上家在本段未出现过打牌"
+    },
+    {
+     "t": 17.0,
+     "who": "across",
+     "type": "hu",
+     "tile": null,
+     "from": null,
+     "note": "口述真值。17s 对家自摸=牌局边界，其后为新一局；上家在本段未出现过打牌"
+    },
+    {
+     "t": 25.0,
+     "who": "me",
+     "type": "discard",
+     "tile": "w8",
+     "from": null,
+     "note": "口述真值。17s 对家自摸=牌局边界，其后为新一局；上家在本段未出现过打牌"
+    },
+    {
+     "t": 27.0,
+     "who": "right",
+     "type": "discard",
+     "tile": "t2",
+     "from": null,
+     "note": "口述真值。17s 对家自摸=牌局边界，其后为新一局；上家在本段未出现过打牌"
+    },
+    {
+     "t": 29.0,
+     "who": "me",
+     "type": "discard",
+     "tile": "b7",
+     "from": null,
+     "note": "口述真值。17s 对家自摸=牌局边界，其后为新一局；上家在本段未出现过打牌"
+    }
+   ]
   },
   "clip03_7504292741762927": {
    "video": "clips_full/clip03_7504292741762927.mp4",
